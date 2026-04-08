@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>七彩回忆·贴纸簿</title>
+    <!-- GSAP 动画库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f7f0e6 0%, #e8dccc 100%);
+            font-family: 'Segoe UI', 'Quicksand', system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* 主界面容器 */
+        .sticker-book {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff9ef;
+            border-radius: 48px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.8);
+            padding: 24px 20px 32px;
+            border: 1px solid #f3e5c9;
+        }
+
+        /* 用户标识区域 - 每位访客的唯一ID */
+        .user-id-section {
+            background: #f7ebd4;
+            border-radius: 60px;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .user-id-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #5e3a1c;
+        }
+
+        .copy-icon {
+            cursor: pointer;
+            color: #f3b33d;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .copy-icon:hover {
+            color: #d48f2b;
+            transform: scale(1.05);
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            font-weight: 800;
+            color: #5e3a1c;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        h1 span {
+            background: #f1c40f;
+            padding: 4px 16px;
+            border-radius: 60px;
+            font-size: 1rem;
+            color: #3b2a1f;
+        }
+
+        .subhead {
+            text-align: center;
+            color: #a57c4c;
+            margin-top: 8px;
+            margin-bottom: 28px;
+            font-style: italic;
+        }
+
+        /* 七彩贴纸网格 */
+        .sticker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 110px));
+            justify-content: center;
+            gap: 16px;
+            margin: 20px 0 30px;
+        }
+
+        .sticker {
+            background: #fef5e7;
+            border-radius: 24px;
+            box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            border: 2px solid #ffe2b5;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .sticker.locked {
+            background: #e2d5c0;
+            filter: grayscale(0.3);
+            border: 2px dashed #bc9a6c;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .sticker.unlocked {
+            background: linear-gradient(135deg, #fff6e8, #ffe6ce);
+            border: 2px solid #f3b33d;
+            box-shadow: 0 8px 18px rgba(243,179,61,0.3);
+            cursor: pointer;
+            transform: scale(1);
+            transition: transform 0.2s;
+        }
+
+        .sticker.unlocked:hover {
+            transform: scale(1.02);
+            background: #fff0df;
+        }
+
+        .sticker-icon {
+            font-size: 3rem;
+            margin-bottom: 8px;
+        }
+
+        .sticker-img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 12px;
+            display: block;
+            margin: 0 auto 8px auto;
+        }
+
+        /* 主体图片（WhatsApp 卡片中的主展示） */
+        .wa-main-img {
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+            display: block;
+            margin: 12px auto;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .sticker-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: rgba(0,0,0,0.05);
+            padding: 4px 8px;
+            border-radius: 30px;
+            width: 100%;
+            color: #7a4d2a;
+        }
+
+        .locked .sticker-icon {
+            font-size: 2.5rem;
+            filter: blur(1px);
+            opacity: 0.6;
+        }
+
+        .locked .sticker-label {
+            color: #aa8b64;
+        }
+
+        /* 解锁区域 */
+        .unlock-panel {
+            background: #f7ebd4;
+            border-radius: 60px;
+            padding: 16px 20px;
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 1px #fff8ee, 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .code-input {
+            flex: 2;
+            min-width: 180px;
+            background: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-family: monospace;
+            outline: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .unlock-btn {
+            background: #f3b33d;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #3e2a1c;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .unlock-btn:active {
+            transform: scale(0.96);
+        }
+
+        .message {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: #c97e2a;
+            font-weight: 500;
+        }
+
+        .progress-badge {
+            background: #5e3a1c;
+            color: #ffeaac;
+            padding: 6px 18px;
+            border-radius: 40px;
+            display: inline-block;
+            font-weight: bold;
+        }
+
+        /* WhatsApp 风格模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .whatsapp-card {
+            background: #0c1a24;
+            width: 90%;
+            max-width: 420px;
+            border-radius: 28px;
+            padding: 20px;
+            color: #eef3fc;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.4);
+            border: 1px solid #2e4a62;
+            position: relative;
+        }
+
+        .wa-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .wa-avatar {
+            background: #25d366;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .wa-name {
+            font-weight: bold;
+            color: #25d366;
+        }
+
+        .wa-message {
+            background: #15232e;
+            padding: 16px;
+            border-radius: 20px;
+            margin: 12px 0;
+            line-height: 1.5;
+        }
+
+        .wa-time {
+            font-size: 0.7rem;
+            text-align: right;
+            color: #8ba0ae;
+        }
+
+        .close-modal {
+            background: #3a4c5c;
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 30px;
+            margin-top: 12px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.7rem;
+            color: #b68b54;
+        }
+        /* Responsive tweaks */
+        @media (max-width: 600px) {
+            .sticker-grid {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+                gap: 12px;
+                margin: 14px 0 20px;
+            }
+            .sticker {
+                padding: 10px;
+                border-radius: 18px;
+            }
+            .sticker-icon { font-size: 2.4rem; }
+            .sticker-img { width: 40px; height: 40px; border-radius: 10px; }
+            .sticker-label { font-size: 0.64rem; padding: 3px 6px; }
+
+            .whatsapp-card { max-width: 360px; padding: 14px; }
+            .wa-main-img { max-width: 260px; margin: 10px auto; }
+            .wa-header { gap: 8px; }
+            .wa-avatar { width: 40px; height: 40px; font-size: 1.4rem; }
+            .wa-name { font-size: 0.95rem; }
+            .wa-message { padding: 12px; font-size: 0.95rem; }
+
+            .unlock-panel { flex-direction: column; gap: 10px; align-items: stretch; }
+            .code-input, #restoreVisitorInput { width: 100%; box-sizing: border-box; }
+            .unlock-btn, #restoreVisitorBtn { width: 100%; padding: 10px 12px; }
+
+            .user-id-section { flex-direction: column; align-items: stretch; gap: 8px; }
+            .user-id-box { justify-content: space-between; }
+        }
+
+        @media (max-width: 360px) {
+            h1 { font-size: 1.6rem; }
+            .sticker-grid { gap: 10px; }
+            .whatsapp-card { padding: 12px; }
+            .wa-main-img { max-width: 220px; }
+            .sticker-label { font-size: 0.6rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="sticker-book">
+    <div class="user-id-section">
+        <div class="user-id-box">
+            <span id="visitorIdDisplay">---</span>
+            <i id="copyIdIcon" class="fas fa-copy copy-icon" title="复制你的收藏夹ID"></i>
+        </div>
+        <!-- 新增：通过 Visitor ID 恢复进度 -->
+        <div style="display:flex; gap:8px; align-items:center;">
+            <input id="restoreVisitorInput" class="code-input" style="min-width:140px; padding:8px 12px; font-size:0.85rem;" placeholder="输入 VISITOR-xxxx 恢复" />
+            <button id="restoreVisitorBtn" class="unlock-btn" style="padding:8px 14px; font-size:0.85rem;">恢复</button>
+        </div>
+        <div class="progress-badge" id="progressDisplay">📌 收集 0 / 52 张贴纸</div>
+    </div>
+
+    <h1>🌈 回忆贴纸簿 <span>轻拍贴纸有惊喜哦！</span></h1>
+    <div class="subhead">✨ 每个 Reference Code 对应一段属于我们的独家记忆 ✨</div>
+
+    <div class="sticker-grid" id="stickerGrid"></div>
+
+    <div class="unlock-panel">
+        <input type="text" id="codeInput" class="code-input" placeholder="输入 Reference Code 解锁贴纸" autocomplete="off">
+        <button id="unlockBtn" class="unlock-btn">🔓 粘贴新贴纸</button>
+    </div>
+    <div id="messageArea" class="message"></div>
+    <footer>💡 提示：每个 Reference Code 只能解锁一次。你的收藏进度保存在本地，更换设备后请输入你的收藏夹ID恢复进度。</footer>
+</div>
+
+<!-- 模态框 -->
+<div id="whatsappModal" class="modal">
+    <div class="whatsapp-card" id="modalContent"></div>
+</div>
+
+<!-- Font Awesome 图标库 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<script>
+    // ======================== 配置 Supabase ========================
+    const SUPABASE_URL = 'https://ceslbdscuszngtqsyido.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlc2xiZHNjdXN6bmd0cXN5aWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTU1NjksImV4cCI6MjA5MTIzMTU2OX0.m-u7PuEXXFSVbhkw3IAe3lu_S_ZKWPl2GH_ohNyugnI';
+    // Use a different local name to avoid clashing with the SDK's global `supabase` identifier
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Supabase storage bucket used for icon images (public bucket)
+    const SUPABASE_BUCKET = 'icons';
+
+    // Supabase health check (diagnostic) - will log result to console and show a brief message in the UI
+    (async () => {
+        try {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/fragments?select=id&limit=1`, {
+                headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+            });
+            if (!res.ok) {
+                console.error('Supabase health check failed', res.status, await res.text());
+                const ma = document.getElementById('messageArea');
+                if (ma) ma.innerText = `⚠️ Supabase 检查失败: ${res.status}`;
+            } else {
+                const j = await res.json();
+                console.log('Supabase reachable (fragments test):', j);
+            }
+        } catch (err) {
+            console.error('Supabase check error:', err);
+            const ma = document.getElementById('messageArea');
+            if (ma) ma.innerText = '⚠️ 无法连接 Supabase，请检查网络/键或表权限';
+        }
+    })();
+
+    // ======================== 全局变量 ========================
+    let currentVisitorId = null;
+    let unlockedSet = new Set();
+    let fragmentsMap = new Map();  // 存储所有碎片，key为id
+    let codeToIdMap = new Map();   // 存储reference_code到id的映射
+
+    // 尝试从 fragment 中获取图标 URL（优先使用 icon_url）
+    function getIconSrc(fragment) {
+        if (!fragment) return null;
+        const path = fragment.icon_url || fragment.icon_path || null;
+        if (!path) return null;
+        // 如果已经是完整 URL 就直接返回
+        if (/^https?:\/\//i.test(path)) return path;
+        // 否则构建 Supabase storage 公共对象 URL
+        return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${encodeURI(path)}`;
+    }
+
+    // ======================== 初始化 ========================
+    async function init() {
+        // 1. 生成或读取访客ID
+        currentVisitorId = localStorage.getItem('visitor_id');
+        if (!currentVisitorId) {
+            currentVisitorId = generateVisitorId();
+            localStorage.setItem('visitor_id', currentVisitorId);
+        }
+        document.getElementById('visitorIdDisplay').innerText = currentVisitorId;
+
+        // 2. 加载所有碎片数据
+        await loadFragments();
+
+        // 3. 加载该访客的解锁进度
+        await loadProgress();
+
+        // 4. 渲染网格
+        renderStickerGrid();
+
+        // 5. 绑定事件
+        document.getElementById('copyIdIcon').onclick = copyVisitorId;
+        document.getElementById('unlockBtn').onclick = handleUnlock;
+    document.getElementById('restoreVisitorBtn').onclick = restoreVisitor;
+    document.getElementById('restoreVisitorInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') restoreVisitor(); });
+        document.getElementById('codeInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleUnlock();
+        });
+    }
+
+    // 生成随机访客ID
+    function generateVisitorId() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+        let result = 'VISITOR-';
+        for (let i = 0; i < 8; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
+    // 加载所有碎片
+    async function loadFragments() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('fragments')
+                .select('*')
+                .order('order', { ascending: true });
+            if (error) throw error;
+            fragmentsMap.clear();
+            codeToIdMap.clear();
+            data.forEach(f => {
+                fragmentsMap.set(f.id, f);
+                codeToIdMap.set(f.reference_code, f.id);
+            });
+        } catch (err) {
+            console.error('加载碎片失败:', err);
+            document.getElementById('messageArea').innerText = '⚠️ 加载失败，请刷新页面重试';
+        }
+    }
+
+    // 加载用户的解锁进度
+    async function loadProgress() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('user_progress')
+                .select('fragment_id')
+                .eq('visitor_id', currentVisitorId);
+            if (error) throw error;
+            unlockedSet.clear();
+            data.forEach(row => unlockedSet.add(row.fragment_id));
+            updateProgress();
+        } catch (err) {
+            console.error('加载进度失败:', err);
+        }
+    }
+
+    // 解锁新贴纸
+    async function unlockFragment(fragmentId, refCode) {
+        if (unlockedSet.has(fragmentId)) {
+            document.getElementById('messageArea').innerText = `✨ 贴纸“${refCode}”已经在你手帐里啦！`;
+            return false;
+        }
+        try {
+            const { error } = await supabaseClient
+                .from('user_progress')
+                .insert({ visitor_id: currentVisitorId, fragment_id: fragmentId });
+            if (error) throw error;
+            unlockedSet.add(fragmentId);
+            renderStickerGrid();
+            updateProgress();
+            // 显示WhatsApp卡片
+            const fragment = fragmentsMap.get(fragmentId);
+            showWhatsAppModal(fragment);
+            document.getElementById('messageArea').innerText = `🎉 获得新贴纸：「${refCode}」！`;
+            // 全收集彩蛋
+            if (unlockedSet.size === fragmentsMap.size) {
+                setTimeout(() => alert("🎊 太棒了！你集齐了全部回忆贴纸！ 🎊"), 500);
+            }
+            return true;
+        } catch (err) {
+            console.error('解锁失败:', err);
+            document.getElementById('messageArea').innerText = '❌ 解锁失败，请稍后重试';
+            return false;
+        }
+    }
+
+    // 展示WhatsApp卡片动画
+    function showWhatsAppModal(fragment) {
+        if (!fragment) return;
+        const modal = document.getElementById('whatsappModal');
+        const modalContent = document.getElementById('modalContent');
+    // avatar should remain an emoji; image is the modal's main subject
+    const avatarIcon = (fragment.id % 2 === 0 ? "💖" : "🌟");
+    const mainImageSrc = getIconSrc(fragment);
+        const senderName = fragment.id % 2 === 0 ? "特别的人" : "我自己";
+
+        // Escape HTML to prevent injection
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        const raw = fragment.message || '';
+        // Convert literal "\n" sequences to real newlines, then normalize all newline types to <br>
+        const normalized = escapeHtml(raw)
+            .replace(/\\r\\n/g, '\n') // literal \r\n -> newline
+            .replace(/\\n/g, '\n')     // literal \n -> newline
+            .replace(/\r\n|\r|\n/g, '<br>'); // real newlines -> <br>
+
+        // Simple markdown-like *bold* -> <strong>
+        const formatted = normalized.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+
+        modalContent.innerHTML = `
+            <div class="wa-header">
+                <div class="wa-avatar">${avatarIcon}</div>
+                <div class="wa-name">${senderName}</div>
+            </div>
+            ${mainImageSrc ? `<img src="${mainImageSrc}" class="wa-main-img" alt="${fragment.label || ''}">` : ''}
+            <div class="wa-message">${formatted}</div>
+            <div class="wa-time">${new Date().toLocaleTimeString()} ✅✅</div>
+            <button class="close-modal" id="closeModalBtn">关闭贴纸</button>
+        `;
+        modal.style.display = 'flex';
+        const cardElem = document.querySelector('.whatsapp-card');
+        gsap.fromTo(cardElem, 
+            { opacity: 0, scale: 0.7, y: 40 },
+            { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(1.2)" }
+        );
+        document.getElementById('closeModalBtn').onclick = () => {
+            modal.style.display = 'none';
+        };
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        };
+    }
+
+    // 渲染贴纸网格
+    function renderStickerGrid() {
+        const grid = document.getElementById('stickerGrid');
+        grid.innerHTML = '';
+        for (let [id, fragment] of fragmentsMap) {
+            const isUnlocked = unlockedSet.has(id);
+            const stickerDiv = document.createElement('div');
+            stickerDiv.className = `sticker ${isUnlocked ? 'unlocked' : 'locked'}`;
+            const iconSrc = getIconSrc(fragment);
+            const iconHtml = isUnlocked && iconSrc ? `<img src="${iconSrc}" alt="${fragment.label || ''}" class="sticker-img">` : `<div class="sticker-icon">${isUnlocked ? fragment.icon : '❓'}</div>`;
+            stickerDiv.innerHTML = `
+                ${iconHtml}
+                <div class="sticker-label">${isUnlocked ? fragment.label : '???'}</div>
+            `;
+            if (isUnlocked) {
+                stickerDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showWhatsAppModal(fragment);
+                    gsap.to(stickerDiv, { scale: 0.98, duration: 0.1, yoyo: true, repeat: 1 });
+                });
+            } else {
+                stickerDiv.style.cursor = 'default';
+            }
+            grid.appendChild(stickerDiv);
+        }
+    }
+
+    function updateProgress() {
+        const count = unlockedSet.size;
+        const total = fragmentsMap.size;
+        document.getElementById('progressDisplay').innerHTML = `📌 收集 ${count} / ${total} 张贴纸`;
+    }
+
+    // 处理解锁输入
+    async function handleUnlock() {
+        const input = document.getElementById('codeInput').value.trim().toLowerCase();
+        if (!input) {
+            document.getElementById('messageArea').innerText = '🔍 请输入一个 Reference Code';
+            return;
+        }
+        const fragmentId = codeToIdMap.get(input);
+        if (!fragmentId) {
+            document.getElementById('messageArea').innerText = `❌ 没有「${input}」对应的回忆，再试试别的~`;
+            return;
+        }
+        await unlockFragment(fragmentId, input);
+        document.getElementById('codeInput').value = '';
+        // 为最新解锁的贴纸添加弹跳动画
+        setTimeout(() => {
+            const newlyUnlocked = document.querySelectorAll('.sticker.unlocked');
+            const lastOne = newlyUnlocked[newlyUnlocked.length-1];
+            if(lastOne) gsap.fromTo(lastOne, { scale: 0.8, rotation: -5 }, { scale: 1, rotation: 0, duration: 0.4, ease: "elastic.out(1, 0.5)" });
+        }, 50);
+    }
+
+    // 复制访客ID
+    function copyVisitorId() {
+        if (!currentVisitorId) return;
+        navigator.clipboard.writeText(currentVisitorId).then(() => {
+            const copyIcon = document.getElementById('copyIdIcon');
+            const originalTitle = copyIcon.getAttribute('title');
+            copyIcon.setAttribute('title', '已复制！');
+            setTimeout(() => copyIcon.setAttribute('title', originalTitle), 1500);
+            gsap.to(copyIcon, { scale: 1.2, duration: 0.2, yoyo: true, repeat: 1 });
+        }).catch(err => {
+            console.error('复制失败', err);
+        });
+    }
+
+    // 通过粘贴 Visitor ID 恢复进度
+    async function restoreVisitor() {
+        const input = document.getElementById('restoreVisitorInput').value.trim();
+        if (!input) {
+            document.getElementById('messageArea').innerText = '🔍 请输入你的 Visitor ID (例如 VISITOR-XXXX)';
+            return;
+        }
+        // save and reload progress
+        currentVisitorId = input;
+        localStorage.setItem('visitor_id', currentVisitorId);
+        document.getElementById('visitorIdDisplay').innerText = currentVisitorId;
+        document.getElementById('messageArea').innerText = '⏳ 正在恢复收藏进度...';
+        await loadProgress();
+        renderStickerGrid();
+        document.getElementById('messageArea').innerText = `✅ 已恢复 ${currentVisitorId} 的收藏进度`;
+    }
+
+    // 启动应用
+    window.onload = init;
+</script>
+</body>
+</html>

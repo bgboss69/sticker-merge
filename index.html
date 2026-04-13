@@ -262,6 +262,8 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
+
+            overflow: hidden; /* ✅ 防止背景滚动 */
         }
 
         .whatsapp-card {
@@ -274,6 +276,8 @@
             box-shadow: 0 20px 35px rgba(0,0,0,0.4);
             border: 1px solid #2e4a62;
             position: relative;
+            
+            -webkit-overflow-scrolling: touch;
         }
 
         .wa-header {
@@ -300,6 +304,8 @@
         }
 
         .wa-message {
+            max-height: 40vh;
+            overflow-y: auto;
             background: #15232e;
             padding: 16px;
             border-radius: 20px;

@@ -377,6 +377,10 @@
             box-shadow: 0 20px 35px rgba(0, 0, 0, 0.4);
             border: 1px solid #2e4a62;
             position: relative;
+            max-height: 90vh;
+            /* 限制高度 */
+            overflow-y: auto;
+            scroll-behavior: smooth;
         }
 
         .wa-header {
@@ -466,6 +470,33 @@
             margin-left: 6px;
         }
 
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #cfe3f1;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.05);
+        }
+
+        .icon-btn.danger {
+            color: #ff6b6b;
+        }
+
+        .icon-btn.danger:hover {
+            background: rgba(255, 0, 0, 0.15);
+        }
+
         .send-btn {
             background: #25d366;
             border: none;
@@ -527,14 +558,18 @@
         }
 
         .delete-comment-btn {
-            background: #bf3b2b;
+            background: transparent;
             border: none;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 6px;
+            color: #ff6b6b;
+            font-size: 0.85rem;
             cursor: pointer;
-            font-size: 0.75rem;
             float: right;
+            padding: 2px;
+        }
+
+        .delete-comment-btn:hover {
+            color: #ff3b3b;
+            transform: scale(1.1);
         }
 
         .delete-comment-btn[disabled] {
@@ -687,7 +722,7 @@
             </div>
             <div class="progress-badge" id="progressDisplay">📌 收集 0 / 52 张贴纸</div>
         </div>
-
+        
         <h1>🌈 回忆贴纸簿 <span>轻拍贴纸有惊喜哦！</span></h1>
         <div class="subhead">✨ 每个 Reference Code 对应一段独特的记忆 ✨</div>
 
@@ -783,6 +818,35 @@
             }
         }
 
+        async function loadHeader() {
+            console.log('加载 header, page =', currentPage);
+
+            const { data, error } = await supabaseClient
+                .from('pages')
+                .select('title, hint, subtitle')
+                .eq('id', Number(currentPage)); // 强制数字
+
+            if (error) {
+                console.error('header error:', error);
+                showMessage('❌ header 加载失败', 'error');
+                return;
+            }
+
+            console.log('header data:', data);
+
+            if (!data || data.length === 0) {
+                console.warn('没有匹配的 page');
+                return;
+            }
+
+            const row = data[0];
+
+            document.querySelector('h1').innerHTML =
+                `${row.title || '默认标题'} <span>${row.hint || ''}</span>`;
+
+            document.querySelector('.subhead').innerText =
+                row.subtitle || '';
+        }
         // ======================== 初始化 ========================
         async function init() {
             // 1. 生成或读取访客ID
@@ -792,6 +856,8 @@
                 localStorage.setItem('visitor_id', currentVisitorId);
             }
             document.getElementById('visitorIdDisplay').innerText = currentVisitorId;
+
+            await loadHeader();
 
             // 2. 加载所有碎片数据
             await loadFragments();
@@ -811,17 +877,23 @@
                 if (e.key === 'Enter') handleUnlock();
             });
             // pagination handlers - navigate using actual pages from DB
-            document.getElementById('prevPageBtn').onclick = () => {
+            document.getElementById('prevPageBtn').onclick = async () => {
                 const pages = Array.from(new Set(Array.from(fragmentsMap.values()).map(f => Number(f.page || 1)))).sort((a, b) => a - b);
                 if (!pages.length) return;
                 const idx = pages.indexOf(Number(currentPage));
                 if (idx > 0) { currentPage = pages[idx - 1]; renderStickerGrid(); }
+                currentPage = pages[idx - 1];
+                await loadHeader();   // 👈 加这个
+                renderStickerGrid();
             };
-            document.getElementById('nextPageBtn').onclick = () => {
+            document.getElementById('nextPageBtn').onclick = async () => {
                 const pages = Array.from(new Set(Array.from(fragmentsMap.values()).map(f => Number(f.page || 1)))).sort((a, b) => a - b);
                 if (!pages.length) return;
                 const idx = pages.indexOf(Number(currentPage));
                 if (idx < pages.length - 1) { currentPage = pages[idx + 1]; renderStickerGrid(); }
+                currentPage = pages[idx + 1];
+                await loadHeader();   // 👈 加这个
+                renderStickerGrid();
             };
         }
 
@@ -956,7 +1028,7 @@
                 if (sameVisitor) {
                     const delBtn = document.createElement('button');
                     delBtn.className = 'delete-comment-btn';
-                    delBtn.innerText = '删除';
+                    delBtn.innerHTML = '<i class="fas fa-trash"></i>';
                     delBtn.onclick = async (e) => {
                         e.stopPropagation();
                         if (!confirm('确认删除该留言？此操作不可撤销。')) return;
@@ -1033,83 +1105,131 @@
             }
 
             const formatted = escapeHtml(fragment.message || '')
-                .replace(/\\n/g, '<br>')   // 处理数据库里的 \n
-                .replace(/\n/g, '<br>');   // 处理真实换行
+                .replace(/\\n/g, '<br>')
+                .replace(/\n/g, '<br>');
 
             modalContent.innerHTML = `
-            <div class="wa-header">
-                <div class="wa-avatar">${avatarIcon}</div>
-                <div class="wa-name">${senderName}</div>
+        <div class="wa-header">
+            <div class="wa-avatar">${avatarIcon}</div>
+            <div class="wa-name">${senderName}</div>
+        </div>
+
+        ${mainImageSrc ? `<img src="${mainImageSrc}" class="wa-main-img">` : ''}
+
+        <div class="wa-message">${formatted}</div>
+
+        <div class="comment-area">
+
+            <div class="comment-controls">
+                <textarea id="commentInput" placeholder="写点什么回忆..." maxlength="400"></textarea>
+
+                <div class="comment-actions">
+                    <input type="file" id="imageInput" accept="image/*" style="display:none;" />
+                    <img id="imagePreview" class="image-preview" style="display:none;" />
+
+                    <button id="chooseImageBtn" class="icon-btn">
+                        <i class="fas fa-image"></i>
+                    </button>
+
+                    <button id="removeImageBtn" class="icon-btn danger" style="display:none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
 
-            ${mainImageSrc ? `<img src="${mainImageSrc}" class="wa-main-img">` : ''}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <div class="char-count" id="charCount">0 / 400</div>
 
-            <div class="wa-message">${formatted}</div>
-            <div class="wa-meta">页面: P${escapeHtml(String(fragment.page || '1'))} · 序号: #${escapeHtml(String(fragment.order != null ? fragment.order : ''))}</div>
-
-            <!-- 留言输入（改进 UI） -->
-            <div class="comment-area">
-                <div class="comment-controls">
-                    <textarea id="commentInput" placeholder="写点什么回忆..." aria-label="留言输入"></textarea>
-                    <div class="comment-actions">
-                        <input type="file" id="imageInput" accept="image/*" style="display:none;" />
-                        <img id="imagePreview" class="image-preview" style="display:none;" />
-                        <button id="chooseImageBtn" class="send-btn" style="background:#3a84c6">选图</button>
-                    </div>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
-                    <div class="char-count" id="charCount">0 / 400</div>
-                    <div>
-                        <button id="sendCommentBtn" class="send-btn">发送留言</button>
-                        <button class="close-modal" id="closeModalBtn" style="background:#3a4c5c;margin-left:8px;">关闭贴纸</button>
-                    </div>
-                </div>
-                <div id="commentsList" style="margin-top:10px;"></div>
+                <button id="sendCommentBtn" class="send-btn" disabled>
+                    <span class="btn-text"><i class="fas fa-paper-plane"></i></span>
+                    <span class="btn-loading" style="display:none;"></span>
+                </button>
             </div>
 
-            <div class="wa-time">${new Date().toLocaleTimeString()} ✅✅</div>
-        `;
+            <div id="commentsList"></div>
+        </div>
 
-            // bind comment UI behaviors
+        <button class="close-modal" id="closeModalBtn">关闭贴纸</button>
+    `;
+
+            // ====== 绑定元素 ======
             const commentInput = modalContent.querySelector('#commentInput');
             const imageInput = modalContent.querySelector('#imageInput');
             const imagePreview = modalContent.querySelector('#imagePreview');
             const chooseImageBtn = modalContent.querySelector('#chooseImageBtn');
+            const removeImageBtn = modalContent.querySelector('#removeImageBtn');
             const sendBtn = modalContent.querySelector('#sendCommentBtn');
             const charCount = modalContent.querySelector('#charCount');
 
+            const btnText = sendBtn.querySelector('.btn-text');
+            const btnLoading = sendBtn.querySelector('.btn-loading');
+
+            // ====== 按钮状态控制 ======
+            function updateSendButtonState() {
+                const hasText = commentInput.value.trim().length > 0;
+                const hasImage = imageInput.files.length > 0;
+                sendBtn.disabled = !(hasText || hasImage);
+            }
+
+            // ====== 自动高度 ======
+            commentInput.addEventListener('input', () => {
+                commentInput.style.height = 'auto';
+                commentInput.style.height = commentInput.scrollHeight + 'px';
+
+                charCount.innerText = `${commentInput.value.length} / 400`;
+                updateSendButtonState();
+            });
+
+            // ====== Enter发送 ======
+            commentInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendBtn.click();
+                }
+            });
+
+            // ====== 图片选择 ======
             chooseImageBtn.onclick = () => imageInput.click();
 
             imageInput.onchange = () => {
                 const file = imageInput.files[0];
-                if (!file) { imagePreview.style.display = 'none'; imagePreview.src = ''; return; }
+                if (!file) return;
+
                 if (file.size > 2 * 1024 * 1024) {
-                    showMessage('图片不能超过 2MB', 'error', 2200);
+                    showMessage('图片不能超过2MB', 'error');
                     imageInput.value = '';
                     return;
                 }
-                const url = URL.createObjectURL(file);
-                imagePreview.src = url; imagePreview.style.display = 'block';
+
+                imagePreview.src = URL.createObjectURL(file);
+                imagePreview.style.display = 'block';
+                removeImageBtn.style.display = 'inline-block';
+
+                updateSendButtonState();
             };
 
-            commentInput.addEventListener('input', () => {
-                const v = commentInput.value || '';
-                charCount.innerText = `${v.length} / 400`;
-                sendBtn.disabled = !(v.trim().length || (imageInput.files && imageInput.files.length));
-            });
+            // ====== 移除图片 ======
+            removeImageBtn.onclick = () => {
+                imageInput.value = '';
+                imagePreview.style.display = 'none';
+                removeImageBtn.style.display = 'none';
+                updateSendButtonState();
+            };
 
-            // send handler with spinner and validations
+            // ====== 发送留言 ======
             sendBtn.onclick = async () => {
                 const text = commentInput.value.trim();
                 const file = imageInput.files[0];
-                if (!text && !file) { showMessage('写点内容或选张图吧～', 'error', 2200); return; }
+
+                if (!text && !file) return;
 
                 sendBtn.disabled = true;
-                const spinner = document.createElement('span'); spinner.className = 'spinner';
-                sendBtn.innerText = '';
-                sendBtn.appendChild(spinner);
+                btnText.style.display = 'none';
+                btnLoading.style.display = 'inline-block';
+                btnLoading.className = 'spinner';
 
                 let imageUrl = null;
+
                 try {
                     if (file) imageUrl = await uploadImage(file);
 
@@ -1120,28 +1240,32 @@
                         image_url: imageUrl
                     });
 
+                    // 清空
                     commentInput.value = '';
                     imageInput.value = '';
-                    imagePreview.style.display = 'none'; imagePreview.src = '';
+                    imagePreview.style.display = 'none';
+                    removeImageBtn.style.display = 'none';
                     charCount.innerText = '0 / 400';
+
                     await loadComments(currentFragmentId);
-                    showMessage('✅ 留言已发送', 'success', 1800);
+
+                    showMessage('留言成功 ✨', 'success');
+
                 } catch (err) {
-                    console.error('send comment error', err);
-                    showMessage('发送失败，请稍后再试', 'error', 2600);
-                } finally {
-                    sendBtn.disabled = false;
-                    sendBtn.innerText = '发送留言';
+                    console.error(err);
+                    showMessage('发送失败', 'error');
                 }
+
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                sendBtn.disabled = false;
             };
 
             modal.style.display = 'flex';
 
-            // ✅ 正确顺序：先渲染 → 再加载评论
             await loadComments(fragment.id);
 
-            // ✅ 绑定按钮（关键修复） - handled by modal-local handler
-
+            // ====== 关闭 ======
             document.getElementById('closeModalBtn').onclick = () => {
                 modal.style.display = 'none';
             };
@@ -1149,8 +1273,10 @@
             modal.onclick = (e) => {
                 if (e.target === modal) modal.style.display = 'none';
             };
-        }
 
+            // 初始化状态
+            updateSendButtonState();
+        }
 
         // sendComment removed - modal-local handler is used instead
         // 渲染贴纸网格

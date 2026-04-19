@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -15,6 +16,34 @@
             box-sizing: border-box;
         }
 
+        #commentsList {
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 6px;
+            margin-top: 10px;
+
+            /* 👇 平滑滚动 */
+            scroll-behavior: smooth;
+        }
+
+        /* 🌈 自定义 scrollbar */
+        #commentsList::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #commentsList::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #commentsList::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        #commentsList::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         body {
             background: linear-gradient(145deg, #f7f0e6 0%, #e8dccc 100%);
             font-family: 'Segoe UI', 'Quicksand', system-ui, -apple-system, sans-serif;
@@ -28,7 +57,7 @@
             margin: 0 auto;
             background: #fff9ef;
             border-radius: 48px;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.8);
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.8);
             padding: 24px 20px 32px;
             border: 1px solid #f3e5c9;
         }
@@ -109,10 +138,41 @@
             margin: 20px 0 30px;
         }
 
+        /* 分页控件 */
+        .pagination {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .pagination button {
+            background: #fff;
+            border: 1px solid #e6c88a;
+            color: #5e3a1c;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-indicator {
+            font-size: 0.9rem;
+            color: #7a4d2a;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 10px;
+        }
+
         .sticker {
             background: #fef5e7;
             border-radius: 24px;
-            box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
             aspect-ratio: 1 / 1;
             display: flex;
             flex-direction: column;
@@ -122,6 +182,21 @@
             border: 2px solid #ffe2b5;
             padding: 12px;
             text-align: center;
+            position: relative;
+        }
+
+        /* 贴纸上的页码/序号小角标 */
+        .sticker-badge {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            background: rgba(243, 179, 61, 0.95);
+            color: #2b1b0f;
+            font-size: 0.65rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
         }
 
         .sticker.locked {
@@ -135,7 +210,7 @@
         .sticker.unlocked {
             background: linear-gradient(135deg, #fff6e8, #ffe6ce);
             border: 2px solid #f3b33d;
-            box-shadow: 0 8px 18px rgba(243,179,61,0.3);
+            box-shadow: 0 8px 18px rgba(243, 179, 61, 0.3);
             cursor: pointer;
             transform: scale(1);
             transition: transform 0.2s;
@@ -174,7 +249,7 @@
         .sticker-label {
             font-size: 0.7rem;
             font-weight: 600;
-            background: rgba(0,0,0,0.05);
+            background: rgba(0, 0, 0, 0.05);
             padding: 4px 8px;
             border-radius: 30px;
             width: 100%;
@@ -202,7 +277,7 @@
             flex-wrap: wrap;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 0 0 1px #fff8ee, 0 4px 10px rgba(0,0,0,0.05);
+            box-shadow: inset 0 0 0 1px #fff8ee, 0 4px 10px rgba(0, 0, 0, 0.05);
         }
 
         .code-input {
@@ -215,7 +290,7 @@
             font-size: 1rem;
             font-family: monospace;
             outline: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .unlock-btn {
@@ -237,9 +312,35 @@
         .message {
             text-align: center;
             margin-top: 12px;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: #c97e2a;
-            font-weight: 500;
+            font-weight: 600;
+            min-height: 1.2rem;
+            padding: 8px 12px;
+            border-radius: 12px;
+            transition: all 0.22s ease;
+            display: inline-block;
+        }
+
+        .message.info {
+            background: rgba(243, 179, 61, 0.08);
+            color: #c97e2a;
+        }
+
+        .message.success {
+            background: rgba(46, 204, 113, 0.08);
+            color: #2e8b3a;
+        }
+
+        .message.error {
+            background: rgba(231, 76, 60, 0.08);
+            color: #bf3b2b;
+        }
+
+        input:focus,
+        .code-input:focus {
+            outline: 2px solid rgba(243, 179, 61, 0.22);
+            box-shadow: 0 4px 10px rgba(243, 179, 61, 0.08);
         }
 
         .progress-badge {
@@ -255,9 +356,11 @@
         .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(4px);
             align-items: center;
             justify-content: center;
@@ -271,7 +374,7 @@
             border-radius: 28px;
             padding: 20px;
             color: #eef3fc;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.4);
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.4);
             border: 1px solid #2e4a62;
             position: relative;
         }
@@ -313,6 +416,132 @@
             color: #8ba0ae;
         }
 
+        .wa-meta {
+            font-size: 0.8rem;
+            color: #9fb3c2;
+            margin-top: 6px;
+            text-align: left;
+        }
+
+        /* 评论区样式 */
+        .comment-area {
+            margin-top: 10px;
+        }
+
+        .comment-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .comment-controls textarea {
+            flex: 1;
+            min-height: 70px;
+            resize: vertical;
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
+            color: #eef3fc;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .image-preview {
+            max-width: 84px;
+            max-height: 84px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .char-count {
+            font-size: 0.8rem;
+            color: #8ba0ae;
+            margin-left: 6px;
+        }
+
+        .send-btn {
+            background: #25d366;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .send-btn[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.12);
+            border-top: 3px solid rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .comment-item {
+            background: rgba(255, 255, 255, 0.04);
+            padding: 10px 12px;
+            border-radius: 12px;
+            margin-top: 10px;
+            color: #e6f0f6;
+
+            backdrop-filter: blur(6px);
+            transition: 0.2s;
+        }
+
+        .comment-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .empty-comments {
+            color: #8ba0ae;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* 评论列表可滚动 */
+        #commentsList {
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 6px;
+            margin-top: 8px;
+        }
+
+        .delete-comment-btn {
+            background: #bf3b2b;
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            float: right;
+        }
+
+        .delete-comment-btn[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .close-modal {
             background: #3a4c5c;
             border: none;
@@ -330,6 +559,7 @@
             font-size: 0.7rem;
             color: #b68b54;
         }
+
         /* Responsive tweaks */
         @media (max-width: 600px) {
             .sticker-grid {
@@ -337,239 +567,352 @@
                 gap: 12px;
                 margin: 14px 0 20px;
             }
+
             .sticker {
                 padding: 10px;
                 border-radius: 18px;
             }
-            .sticker-icon { font-size: 2.4rem; }
-            .sticker-img { width: 40px; height: 40px; border-radius: 10px; }
-            .sticker-label { font-size: 0.64rem; padding: 3px 6px; }
 
-            .whatsapp-card { max-width: 360px; padding: 14px; }
-            .wa-main-img { max-width: 260px; margin: 10px auto; }
-            .wa-header { gap: 8px; }
-            .wa-avatar { width: 40px; height: 40px; font-size: 1.4rem; }
-            .wa-name { font-size: 0.95rem; }
-            .wa-message { padding: 12px; font-size: 0.95rem; }
+            .sticker-icon {
+                font-size: 2.4rem;
+            }
 
-            .unlock-panel { flex-direction: column; gap: 10px; align-items: stretch; }
-            .code-input, #restoreVisitorInput { width: 100%; box-sizing: border-box; }
-            .unlock-btn, #restoreVisitorBtn { width: 100%; padding: 10px 12px; }
+            .sticker-img {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+            }
 
-            .user-id-section { flex-direction: column; align-items: stretch; gap: 8px; }
-            .user-id-box { justify-content: space-between; }
+            .sticker-label {
+                font-size: 0.64rem;
+                padding: 3px 6px;
+            }
+
+            .whatsapp-card {
+                max-width: 360px;
+                padding: 14px;
+            }
+
+            .wa-main-img {
+                max-width: 260px;
+                margin: 10px auto;
+            }
+
+            .wa-header {
+                gap: 8px;
+            }
+
+            .wa-avatar {
+                width: 40px;
+                height: 40px;
+                font-size: 1.4rem;
+            }
+
+            .wa-name {
+                font-size: 0.95rem;
+            }
+
+            .wa-message {
+                padding: 12px;
+                font-size: 0.95rem;
+            }
+
+            .unlock-panel {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .code-input,
+            #restoreVisitorInput {
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .unlock-btn,
+            #restoreVisitorBtn {
+                width: 100%;
+                padding: 10px 12px;
+            }
+
+            .user-id-section {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .user-id-box {
+                justify-content: space-between;
+            }
         }
 
         @media (max-width: 360px) {
-            h1 { font-size: 1.6rem; }
-            .sticker-grid { gap: 10px; }
-            .whatsapp-card { padding: 12px; }
-            .wa-main-img { max-width: 220px; }
-            .sticker-label { font-size: 0.6rem; }
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .sticker-grid {
+                gap: 10px;
+            }
+
+            .whatsapp-card {
+                padding: 12px;
+            }
+
+            .wa-main-img {
+                max-width: 220px;
+            }
+
+            .sticker-label {
+                font-size: 0.6rem;
+            }
         }
     </style>
 </head>
+
 <body>
-<div class="sticker-book">
-    <div class="user-id-section">
-        <div class="user-id-box">
-            <span id="visitorIdDisplay">---</span>
-            <i id="copyIdIcon" class="fas fa-copy copy-icon" title="复制你的收藏夹ID"></i>
+    <div class="sticker-book">
+        <div class="user-id-section">
+            <div class="user-id-box">
+                <span id="visitorIdDisplay">---</span>
+                <i id="copyIdIcon" class="fas fa-copy copy-icon" title="复制你的收藏夹ID"></i>
+            </div>
+            <!-- 新增：通过 Visitor ID 恢复进度 -->
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input id="restoreVisitorInput" class="code-input"
+                    style="min-width:140px; padding:8px 12px; font-size:0.85rem;" placeholder="输入 VISITOR-xxxx 恢复"
+                    aria-label="恢复 Visitor ID" />
+                <button id="restoreVisitorBtn" class="unlock-btn"
+                    style="padding:8px 14px; font-size:0.85rem;">恢复</button>
+            </div>
+            <div class="progress-badge" id="progressDisplay">📌 收集 0 / 52 张贴纸</div>
         </div>
-        <!-- 新增：通过 Visitor ID 恢复进度 -->
-        <div style="display:flex; gap:8px; align-items:center;">
-            <input id="restoreVisitorInput" class="code-input" style="min-width:140px; padding:8px 12px; font-size:0.85rem;" placeholder="输入 VISITOR-xxxx 恢复" />
-            <button id="restoreVisitorBtn" class="unlock-btn" style="padding:8px 14px; font-size:0.85rem;">恢复</button>
+
+        <h1>🌈 回忆贴纸簿 <span>轻拍贴纸有惊喜哦！</span></h1>
+        <div class="subhead">✨ 每个 Reference Code 对应一段独特的记忆 ✨</div>
+
+        <div class="sticker-grid" id="stickerGrid"></div>
+
+        <div class="pagination" id="paginationControls" aria-hidden="false">
+            <button id="prevPageBtn" aria-label="上一页">← 上一页</button>
+            <div class="page-indicator" id="pageIndicator">1 / 1</div>
+            <button id="nextPageBtn" aria-label="下一页">下一页 →</button>
         </div>
-        <div class="progress-badge" id="progressDisplay">📌 收集 0 / 52 张贴纸</div>
+
+        <div class="unlock-panel">
+            <input type="text" id="codeInput" class="code-input" placeholder="输入 Reference Code 解锁贴纸" autocomplete="off"
+                aria-label="Reference Code">
+            <button id="unlockBtn" class="unlock-btn">🔓 粘贴新贴纸</button>
+        </div>
+        <div id="messageArea" class="message"></div>
+        <footer>💡 提示：每个 Reference Code 只能解锁一次。你的收藏进度保存在本地，更换设备后请输入你的收藏夹ID恢复进度。</footer>
     </div>
 
-    <h1>🌈 回忆贴纸簿 <span>轻拍贴纸有惊喜哦！</span></h1>
-    <div class="subhead">✨ 每个 Reference Code 对应一段独特的记忆 ✨</div>
-
-    <div class="sticker-grid" id="stickerGrid"></div>
-
-    <div class="unlock-panel">
-        <input type="text" id="codeInput" class="code-input" placeholder="输入 Reference Code 解锁贴纸" autocomplete="off">
-        <button id="unlockBtn" class="unlock-btn">🔓 粘贴新贴纸</button>
+    <!-- 模态框 -->
+    <div id="whatsappModal" class="modal">
+        <div class="whatsapp-card" id="modalContent"></div>
     </div>
-    <div id="messageArea" class="message"></div>
-    <footer>💡 提示：每个 Reference Code 只能解锁一次。你的收藏进度保存在本地，更换设备后请输入你的收藏夹ID恢复进度。</footer>
-</div>
 
-<!-- 模态框 -->
-<div id="whatsappModal" class="modal">
-    <div class="whatsapp-card" id="modalContent"></div>
-</div>
+    <!-- Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-<!-- Font Awesome 图标库 -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        let currentFragmentId = null;
+        // ======================== 配置 Supabase ========================
+        const SUPABASE_URL = 'https://ceslbdscuszngtqsyido.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlc2xiZHNjdXN6bmd0cXN5aWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTU1NjksImV4cCI6MjA5MTIzMTU2OX0.m-u7PuEXXFSVbhkw3IAe3lu_S_ZKWPl2GH_ohNyugnI';
+        // Use a different local name to avoid clashing with the SDK's global `supabase` identifier
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Supabase storage bucket used for icon images (public bucket)
+        const SUPABASE_BUCKET = 'icons';
 
-<script>
-    // ======================== 配置 Supabase ========================
-    const SUPABASE_URL = 'https://ceslbdscuszngtqsyido.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlc2xiZHNjdXN6bmd0cXN5aWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTU1NjksImV4cCI6MjA5MTIzMTU2OX0.m-u7PuEXXFSVbhkw3IAe3lu_S_ZKWPl2GH_ohNyugnI';
-    // Use a different local name to avoid clashing with the SDK's global `supabase` identifier
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // Supabase storage bucket used for icon images (public bucket)
-    const SUPABASE_BUCKET = 'icons';
-
-    // Supabase health check (diagnostic) - will log result to console and show a brief message in the UI
-    (async () => {
-        try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/fragments?select=id&limit=1`, {
-                headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
-            });
-            if (!res.ok) {
-                console.error('Supabase health check failed', res.status, await res.text());
+        // Supabase health check (diagnostic) - will log result to console and show a brief message in the UI
+        (async () => {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/fragments?select=id&limit=1`, {
+                    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+                });
+                if (!res.ok) {
+                    console.error('Supabase health check failed', res.status, await res.text());
+                    const ma = document.getElementById('messageArea');
+                    if (ma) ma.innerText = `⚠️ Supabase 检查失败: ${res.status}`;
+                } else {
+                    const j = await res.json();
+                    console.log('Supabase reachable (fragments test):', j);
+                }
+            } catch (err) {
+                console.error('Supabase check error:', err);
                 const ma = document.getElementById('messageArea');
-                if (ma) ma.innerText = `⚠️ Supabase 检查失败: ${res.status}`;
-            } else {
-                const j = await res.json();
-                console.log('Supabase reachable (fragments test):', j);
+                if (ma) ma.innerText = '⚠️ 无法连接 Supabase，请检查网络/键或表权限';
             }
-        } catch (err) {
-            console.error('Supabase check error:', err);
+        })();
+
+        // ======================== 全局变量 ========================
+        let currentVisitorId = null;
+        let unlockedSet = new Set();
+        let fragmentsMap = new Map();  // 存储所有碎片，key为id
+        let codeToIdMap = new Map();   // 存储reference_code到id的映射
+        // 分页
+        let currentPage = 1;
+        const ITEMS_PER_PAGE = 12;
+
+        // 尝试从 fragment 中获取图标 URL（优先使用 icon_url）
+        function getIconSrc(fragment) {
+            if (!fragment) return null;
+            const path = fragment.icon_url || fragment.icon_path || null;
+            if (!path) return null;
+            // 如果已经是完整 URL 就直接返回
+            if (/^https?:\/\//i.test(path)) return path;
+            // 否则构建 Supabase storage 公共对象 URL
+            return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${encodeURI(path)}`;
+        }
+
+        // =============== 简易 Toast/Message Helper ===============
+        function showMessage(text, type = 'info', timeout = 3000) {
             const ma = document.getElementById('messageArea');
-            if (ma) ma.innerText = '⚠️ 无法连接 Supabase，请检查网络/键或表权限';
-        }
-    })();
-
-    // ======================== 全局变量 ========================
-    let currentVisitorId = null;
-    let unlockedSet = new Set();
-    let fragmentsMap = new Map();  // 存储所有碎片，key为id
-    let codeToIdMap = new Map();   // 存储reference_code到id的映射
-
-    // 尝试从 fragment 中获取图标 URL（优先使用 icon_url）
-    function getIconSrc(fragment) {
-        if (!fragment) return null;
-        const path = fragment.icon_url || fragment.icon_path || null;
-        if (!path) return null;
-        // 如果已经是完整 URL 就直接返回
-        if (/^https?:\/\//i.test(path)) return path;
-        // 否则构建 Supabase storage 公共对象 URL
-        return `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${encodeURI(path)}`;
-    }
-
-    // ======================== 初始化 ========================
-    async function init() {
-        // 1. 生成或读取访客ID
-        currentVisitorId = localStorage.getItem('visitor_id');
-        if (!currentVisitorId) {
-            currentVisitorId = generateVisitorId();
-            localStorage.setItem('visitor_id', currentVisitorId);
-        }
-        document.getElementById('visitorIdDisplay').innerText = currentVisitorId;
-
-        // 2. 加载所有碎片数据
-        await loadFragments();
-
-        // 3. 加载该访客的解锁进度
-        await loadProgress();
-
-        // 4. 渲染网格
-        renderStickerGrid();
-
-        // 5. 绑定事件
-        document.getElementById('copyIdIcon').onclick = copyVisitorId;
-        document.getElementById('unlockBtn').onclick = handleUnlock;
-    document.getElementById('restoreVisitorBtn').onclick = restoreVisitor;
-    document.getElementById('restoreVisitorInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') restoreVisitor(); });
-        document.getElementById('codeInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleUnlock();
-        });
-    }
-
-    // 生成随机访客ID
-    function generateVisitorId() {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
-        let result = 'VISITOR-';
-        for (let i = 0; i < 8; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-    }
-
-    // 加载所有碎片
-    async function loadFragments() {
-        try {
-            const { data, error } = await supabaseClient
-                .from('fragments')
-                .select('*')
-                .order('order', { ascending: true });
-            if (error) throw error;
-            fragmentsMap.clear();
-            codeToIdMap.clear();
-            data.forEach(f => {
-                fragmentsMap.set(f.id, f);
-                codeToIdMap.set(f.reference_code, f.id);
-            });
-        } catch (err) {
-            console.error('加载碎片失败:', err);
-            document.getElementById('messageArea').innerText = '⚠️ 加载失败，请刷新页面重试';
-        }
-    }
-
-    // 加载用户的解锁进度
-    async function loadProgress() {
-        try {
-            const { data, error } = await supabaseClient
-                .from('user_progress')
-                .select('fragment_id')
-                .eq('visitor_id', currentVisitorId);
-            if (error) throw error;
-            unlockedSet.clear();
-            data.forEach(row => unlockedSet.add(row.fragment_id));
-            updateProgress();
-        } catch (err) {
-            console.error('加载进度失败:', err);
-        }
-    }
-
-    // 解锁新贴纸
-    async function unlockFragment(fragmentId, refCode) {
-        if (unlockedSet.has(fragmentId)) {
-            document.getElementById('messageArea').innerText = `✨ 贴纸“${refCode}”已经在你手帐里啦！`;
-            return false;
-        }
-        try {
-            const { error } = await supabaseClient
-                .from('user_progress')
-                .insert({ visitor_id: currentVisitorId, fragment_id: fragmentId });
-            if (error) throw error;
-            unlockedSet.add(fragmentId);
-            renderStickerGrid();
-            updateProgress();
-            // 显示WhatsApp卡片
-            const fragment = fragmentsMap.get(fragmentId);
-            showWhatsAppModal(fragment);
-            document.getElementById('messageArea').innerText = `🎉 获得新贴纸：「${refCode}」！`;
-            // 全收集彩蛋
-            if (unlockedSet.size === fragmentsMap.size) {
-                setTimeout(() => alert("🎊 太棒了！你集齐了全部回忆贴纸！ 🎊"), 500);
+            if (!ma) return;
+            ma.classList.remove('info', 'success', 'error');
+            ma.classList.add(type);
+            ma.innerText = text;
+            if (timeout > 0) {
+                setTimeout(() => {
+                    // fade out
+                    ma.style.opacity = '0.0';
+                    setTimeout(() => { ma.innerText = ''; ma.style.opacity = '1'; ma.classList.remove(type); }, 220);
+                }, timeout);
             }
-            return true;
-        } catch (err) {
-            console.error('解锁失败:', err);
-            document.getElementById('messageArea').innerText = '❌ 解锁失败，请稍后重试';
-            return false;
         }
-    }
 
-    // 展示WhatsApp卡片动画
-    function showWhatsAppModal(fragment) {
-        if (!fragment) return;
-        const modal = document.getElementById('whatsappModal');
-        const modalContent = document.getElementById('modalContent');
-    // avatar should remain an emoji; image is the modal's main subject
-    const avatarIcon = (fragment.id % 2 === 0 ? "💖" : "🌟");
-    const mainImageSrc = getIconSrc(fragment);
-        const senderName = fragment.id % 2 === 0 ? "特别的人" : "我自己";
+        // ======================== 初始化 ========================
+        async function init() {
+            // 1. 生成或读取访客ID
+            currentVisitorId = localStorage.getItem('visitor_id');
+            if (!currentVisitorId) {
+                currentVisitorId = generateVisitorId();
+                localStorage.setItem('visitor_id', currentVisitorId);
+            }
+            document.getElementById('visitorIdDisplay').innerText = currentVisitorId;
 
-        // Escape HTML to prevent injection
+            // 2. 加载所有碎片数据
+            await loadFragments();
+
+            // 3. 加载该访客的解锁进度
+            await loadProgress();
+
+            // 4. 渲染网格
+            renderStickerGrid();
+
+            // 5. 绑定事件
+            document.getElementById('copyIdIcon').onclick = copyVisitorId;
+            document.getElementById('unlockBtn').onclick = handleUnlock;
+            document.getElementById('restoreVisitorBtn').onclick = restoreVisitor;
+            document.getElementById('restoreVisitorInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') restoreVisitor(); });
+            document.getElementById('codeInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleUnlock();
+            });
+            // pagination handlers - navigate using actual pages from DB
+            document.getElementById('prevPageBtn').onclick = () => {
+                const pages = Array.from(new Set(Array.from(fragmentsMap.values()).map(f => Number(f.page || 1)))).sort((a, b) => a - b);
+                if (!pages.length) return;
+                const idx = pages.indexOf(Number(currentPage));
+                if (idx > 0) { currentPage = pages[idx - 1]; renderStickerGrid(); }
+            };
+            document.getElementById('nextPageBtn').onclick = () => {
+                const pages = Array.from(new Set(Array.from(fragmentsMap.values()).map(f => Number(f.page || 1)))).sort((a, b) => a - b);
+                if (!pages.length) return;
+                const idx = pages.indexOf(Number(currentPage));
+                if (idx < pages.length - 1) { currentPage = pages[idx + 1]; renderStickerGrid(); }
+            };
+        }
+
+        // 生成随机访客ID
+        function generateVisitorId() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+            let result = 'VISITOR-';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // 加载所有碎片
+        async function loadFragments() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('fragments')
+                    .select('*')
+                    .order('page', { ascending: true })
+                    .order('order', { ascending: true });
+                if (error) throw error;
+                fragmentsMap.clear();
+                codeToIdMap.clear();
+                data.forEach(f => {
+                    fragmentsMap.set(f.id, f);
+                    // normalize reference codes for case-insensitive lookup
+                    if (f.reference_code) {
+                        const key = String(f.reference_code).trim();
+                        codeToIdMap.set(key, f.id);
+                        codeToIdMap.set(key.toLowerCase(), f.id);
+                        codeToIdMap.set(key.toUpperCase(), f.id);
+                    }
+                });
+            } catch (err) {
+                console.error('加载碎片失败:', err);
+                document.getElementById('messageArea').innerText = '⚠️ 加载失败，请刷新页面重试';
+            }
+        }
+
+        // 加载用户的解锁进度
+        async function loadProgress() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('user_progress')
+                    .select('fragment_id')
+                    .eq('visitor_id', currentVisitorId);
+                if (error) throw error;
+                unlockedSet.clear();
+                data.forEach(row => unlockedSet.add(row.fragment_id));
+                updateProgress();
+            } catch (err) {
+                console.error('加载进度失败:', err);
+            }
+        }
+
+        // 解锁新贴纸
+        async function unlockFragment(fragmentId, refCode) {
+            if (unlockedSet.has(fragmentId)) {
+                showMessage(`✨ 贴纸“${refCode}”已经在你手帐里啦！`, 'info', 2500);
+                return false;
+            }
+            try {
+                const { error } = await supabaseClient
+                    .from('user_progress')
+                    .insert({ visitor_id: currentVisitorId, fragment_id: fragmentId });
+                if (error) throw error;
+                unlockedSet.add(fragmentId);
+                // 显示WhatsApp卡片
+                const fragment = fragmentsMap.get(fragmentId);
+                // 如果 DB 有 page 字段，跳到该 page
+                try {
+                    currentPage = Number(fragment.page || currentPage || 1);
+                } catch (e) { /* ignore */ }
+                renderStickerGrid();
+                updateProgress();
+                showWhatsAppModal(fragment);
+                showMessage(`🎉 获得新贴纸：「${refCode}」！`, 'success', 3500);
+                // 全收集彩蛋
+                if (unlockedSet.size === fragmentsMap.size) {
+                    setTimeout(() => alert("🎊 太棒了！你集齐了全部回忆贴纸！ 🎊"), 500);
+                }
+                return true;
+            } catch (err) {
+                console.error('解锁失败:', err);
+                document.getElementById('messageArea').innerText = '❌ 解锁失败，请稍后重试';
+                return false;
+            }
+        }
         function escapeHtml(str) {
-            return String(str)
+            return String(str || '')
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
@@ -577,128 +920,381 @@
                 .replace(/'/g, '&#39;');
         }
 
-        const raw = fragment.message || '';
-        // Convert literal "\n" sequences to real newlines, then normalize all newline types to <br>
-        const normalized = escapeHtml(raw)
-            .replace(/\\r\\n/g, '\n') // literal \r\n -> newline
-            .replace(/\\n/g, '\n')     // literal \n -> newline
-            .replace(/\r\n|\r|\n/g, '<br>'); // real newlines -> <br>
+        function formatMultiline(str) {
+            return escapeHtml(str).replace(/\r?\n/g, '<br>');
+        }
 
-        // Simple markdown-like *bold* -> <strong>
-        const formatted = normalized.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+        async function loadComments(fragmentId) {
+            const { data, error } = await supabaseClient
+                .from('messages')
+                .select('*')
+                .eq('fragment_id', fragmentId)
+                .order('created_at', { ascending: false });
 
-        modalContent.innerHTML = `
+            const list = document.getElementById('commentsList');
+            if (!list) return;
+
+            list.innerHTML = '';
+            if (!data || data.length === 0) {
+                list.innerHTML = `<div class="empty-comments">还没有留言，成为第一个留下回忆的人吧～</div>`;
+                return;
+            }
+
+            data.forEach(c => {
+                const formattedText = formatMultiline(c.content || '');
+                const imgHtml = c.image_url ? `<img src="${escapeHtml(c.image_url)}" style="width:100%;margin-top:8px;border-radius:8px;">` : '';
+
+                const item = document.createElement('div');
+                item.className = 'comment-item';
+
+                const metaLine = document.createElement('div');
+                metaLine.style.cssText = 'font-size:0.75rem;color:#8ba0ae;margin-bottom:6px;';
+                metaLine.innerText = `👤 ${String(c.visitor_id || '').slice(-4)} · ${new Date(c.created_at).toLocaleString()}`;
+
+                // if this comment belongs to currentVisitorId (exact match) or last-4 match, show delete button
+                const sameVisitor = c.visitor_id && currentVisitorId && (c.visitor_id === currentVisitorId || String(c.visitor_id).slice(-4) === String(currentVisitorId).slice(-4));
+                if (sameVisitor) {
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'delete-comment-btn';
+                    delBtn.innerText = '删除';
+                    delBtn.onclick = async (e) => {
+                        e.stopPropagation();
+                        if (!confirm('确认删除该留言？此操作不可撤销。')) return;
+                        delBtn.disabled = true;
+                        try {
+                            const { error } = await supabaseClient
+                                .from('messages')
+                                .delete()
+                                .eq('id', c.id);
+                            if (error) throw error;
+                            await loadComments(fragmentId);
+                            showMessage('留言已删除', 'success', 1800);
+                        } catch (err) {
+                            console.error('删除留言失败', err);
+                            // try to show server error message/details when available
+                            const msg = (err && err.message) || (err && err.error) || '删除失败，请查看控制台';
+                            showMessage(`删除失败：${msg}`, 'error', 5000);
+                            delBtn.disabled = false;
+                        }
+                    };
+                    metaLine.appendChild(delBtn);
+                }
+
+                const contentDiv = document.createElement('div');
+                contentDiv.innerHTML = formattedText;
+
+                item.appendChild(metaLine);
+                item.appendChild(contentDiv);
+                if (imgHtml) {
+                    const tmp = document.createElement('div'); tmp.innerHTML = imgHtml;
+                    item.appendChild(tmp.firstChild);
+                }
+
+                list.appendChild(item);
+            });
+            list.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        async function uploadImage(file) {
+            const fileName = `${Date.now()}_${file.name}`;
+
+            const { error } = await supabaseClient
+                .storage
+                .from('comments')
+                .upload(fileName, file);
+
+            if (error) {
+                console.error(error);
+                alert("上传失败");
+                return null;
+            }
+
+            return `${SUPABASE_URL}/storage/v1/object/public/comments/${fileName}`;
+        }
+
+        // remove previous global delayed binder and implement per-modal handlers
+        // 展示WhatsApp卡片动画
+        async function showWhatsAppModal(fragment) {
+            if (!fragment) return;
+
+            const modal = document.getElementById('whatsappModal');
+            const modalContent = document.getElementById('modalContent');
+
+            currentFragmentId = fragment.id;
+
+            const avatarIcon = (fragment.id % 2 === 0 ? "💖" : "🌟");
+            const mainImageSrc = getIconSrc(fragment);
+            const senderName = fragment.id % 2 === 0 ? "特别的人" : "我自己";
+
+            function escapeHtml(str) {
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+            }
+
+            const formatted = escapeHtml(fragment.message || '')
+                .replace(/\\n/g, '<br>')   // 处理数据库里的 \n
+                .replace(/\n/g, '<br>');   // 处理真实换行
+
+            modalContent.innerHTML = `
             <div class="wa-header">
                 <div class="wa-avatar">${avatarIcon}</div>
                 <div class="wa-name">${senderName}</div>
             </div>
-            ${mainImageSrc ? `<img src="${mainImageSrc}" class="wa-main-img" alt="${fragment.label || ''}">` : ''}
-            <div class="wa-message">${formatted}</div>
-            <div class="wa-time">${new Date().toLocaleTimeString()} ✅✅</div>
-            <button class="close-modal" id="closeModalBtn">关闭贴纸</button>
-        `;
-        modal.style.display = 'flex';
-        const cardElem = document.querySelector('.whatsapp-card');
-        gsap.fromTo(cardElem, 
-            { opacity: 0, scale: 0.7, y: 40 },
-            { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(1.2)" }
-        );
-        document.getElementById('closeModalBtn').onclick = () => {
-            modal.style.display = 'none';
-        };
-        modal.onclick = (e) => {
-            if (e.target === modal) modal.style.display = 'none';
-        };
-    }
 
-    // 渲染贴纸网格
-    function renderStickerGrid() {
-        const grid = document.getElementById('stickerGrid');
-        grid.innerHTML = '';
-        for (let [id, fragment] of fragmentsMap) {
-            const isUnlocked = unlockedSet.has(id);
-            const stickerDiv = document.createElement('div');
-            stickerDiv.className = `sticker ${isUnlocked ? 'unlocked' : 'locked'}`;
-            const iconSrc = getIconSrc(fragment);
-            const iconHtml = isUnlocked && iconSrc ? `<img src="${iconSrc}" alt="${fragment.label || ''}" class="sticker-img">` : `<div class="sticker-icon">${isUnlocked ? fragment.icon : '❓'}</div>`;
-            stickerDiv.innerHTML = `
+            ${mainImageSrc ? `<img src="${mainImageSrc}" class="wa-main-img">` : ''}
+
+            <div class="wa-message">${formatted}</div>
+            <div class="wa-meta">页面: P${escapeHtml(String(fragment.page || '1'))} · 序号: #${escapeHtml(String(fragment.order != null ? fragment.order : ''))}</div>
+
+            <!-- 留言输入（改进 UI） -->
+            <div class="comment-area">
+                <div class="comment-controls">
+                    <textarea id="commentInput" placeholder="写点什么回忆..." aria-label="留言输入"></textarea>
+                    <div class="comment-actions">
+                        <input type="file" id="imageInput" accept="image/*" style="display:none;" />
+                        <img id="imagePreview" class="image-preview" style="display:none;" />
+                        <button id="chooseImageBtn" class="send-btn" style="background:#3a84c6">选图</button>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                    <div class="char-count" id="charCount">0 / 400</div>
+                    <div>
+                        <button id="sendCommentBtn" class="send-btn">发送留言</button>
+                        <button class="close-modal" id="closeModalBtn" style="background:#3a4c5c;margin-left:8px;">关闭贴纸</button>
+                    </div>
+                </div>
+                <div id="commentsList" style="margin-top:10px;"></div>
+            </div>
+
+            <div class="wa-time">${new Date().toLocaleTimeString()} ✅✅</div>
+        `;
+
+            // bind comment UI behaviors
+            const commentInput = modalContent.querySelector('#commentInput');
+            const imageInput = modalContent.querySelector('#imageInput');
+            const imagePreview = modalContent.querySelector('#imagePreview');
+            const chooseImageBtn = modalContent.querySelector('#chooseImageBtn');
+            const sendBtn = modalContent.querySelector('#sendCommentBtn');
+            const charCount = modalContent.querySelector('#charCount');
+
+            chooseImageBtn.onclick = () => imageInput.click();
+
+            imageInput.onchange = () => {
+                const file = imageInput.files[0];
+                if (!file) { imagePreview.style.display = 'none'; imagePreview.src = ''; return; }
+                if (file.size > 2 * 1024 * 1024) {
+                    showMessage('图片不能超过 2MB', 'error', 2200);
+                    imageInput.value = '';
+                    return;
+                }
+                const url = URL.createObjectURL(file);
+                imagePreview.src = url; imagePreview.style.display = 'block';
+            };
+
+            commentInput.addEventListener('input', () => {
+                const v = commentInput.value || '';
+                charCount.innerText = `${v.length} / 400`;
+                sendBtn.disabled = !(v.trim().length || (imageInput.files && imageInput.files.length));
+            });
+
+            // send handler with spinner and validations
+            sendBtn.onclick = async () => {
+                const text = commentInput.value.trim();
+                const file = imageInput.files[0];
+                if (!text && !file) { showMessage('写点内容或选张图吧～', 'error', 2200); return; }
+
+                sendBtn.disabled = true;
+                const spinner = document.createElement('span'); spinner.className = 'spinner';
+                sendBtn.innerText = '';
+                sendBtn.appendChild(spinner);
+
+                let imageUrl = null;
+                try {
+                    if (file) imageUrl = await uploadImage(file);
+
+                    await supabaseClient.from('messages').insert({
+                        fragment_id: currentFragmentId,
+                        visitor_id: currentVisitorId,
+                        content: text,
+                        image_url: imageUrl
+                    });
+
+                    commentInput.value = '';
+                    imageInput.value = '';
+                    imagePreview.style.display = 'none'; imagePreview.src = '';
+                    charCount.innerText = '0 / 400';
+                    await loadComments(currentFragmentId);
+                    showMessage('✅ 留言已发送', 'success', 1800);
+                } catch (err) {
+                    console.error('send comment error', err);
+                    showMessage('发送失败，请稍后再试', 'error', 2600);
+                } finally {
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = '发送留言';
+                }
+            };
+
+            modal.style.display = 'flex';
+
+            // ✅ 正确顺序：先渲染 → 再加载评论
+            await loadComments(fragment.id);
+
+            // ✅ 绑定按钮（关键修复） - handled by modal-local handler
+
+            document.getElementById('closeModalBtn').onclick = () => {
+                modal.style.display = 'none';
+            };
+
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.style.display = 'none';
+            };
+        }
+
+
+        // sendComment removed - modal-local handler is used instead
+        // 渲染贴纸网格
+        function renderStickerGrid() {
+            const grid = document.getElementById('stickerGrid');
+            grid.innerHTML = '';
+            // group fragments by their DB page value
+            const items = Array.from(fragmentsMap.entries());
+            const pages = Array.from(new Set(items.map(([id, f]) => Number(f.page || 1)))).sort((a, b) => a - b);
+            if (!pages.length) pages.push(1);
+            if (!pages.includes(Number(currentPage))) currentPage = pages[0];
+            const pageItems = items.filter(([id, f]) => Number(f.page || 1) === Number(currentPage));
+            for (let [id, fragment] of pageItems) {
+                const isUnlocked = unlockedSet.has(id);
+                const stickerDiv = document.createElement('div');
+                stickerDiv.className = `sticker ${isUnlocked ? 'unlocked' : 'locked'}`;
+                const iconSrc = getIconSrc(fragment);
+                const iconHtml = isUnlocked && iconSrc ? `<img src="${iconSrc}" alt="${fragment.label || ''}" class="sticker-img">` : `<div class="sticker-icon">${isUnlocked ? fragment.icon : '❓'}</div>`;
+                const pageNum = Number(fragment.page || 1);
+                const ord = fragment.order != null ? fragment.order : '';
+                stickerDiv.innerHTML = `
                 ${iconHtml}
                 <div class="sticker-label">${isUnlocked ? fragment.label : '???'}</div>
             `;
-            if (isUnlocked) {
-                stickerDiv.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    showWhatsAppModal(fragment);
-                    gsap.to(stickerDiv, { scale: 0.98, duration: 0.1, yoyo: true, repeat: 1 });
+                if (isUnlocked) {
+                    stickerDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showWhatsAppModal(fragment);
+                        gsap.to(stickerDiv, { scale: 0.98, duration: 0.1, yoyo: true, repeat: 1 });
+                    });
+                } else {
+                    stickerDiv.style.cursor = 'default';
+                }
+                grid.appendChild(stickerDiv);
+            }
+
+            // update pagination UI using pages list
+            const pageList = Array.from(new Set(Array.from(fragmentsMap.values()).map(f => Number(f.page || 1)))).sort((a, b) => a - b);
+            const pageIndex = pageList.indexOf(Number(currentPage));
+            const indicator = document.getElementById('pageIndicator');
+            if (pageIndex === -1) {
+                indicator.innerText = `0 / 0`;
+                indicator.title = '';
+                document.getElementById('prevPageBtn').disabled = true;
+                document.getElementById('nextPageBtn').disabled = true;
+            } else {
+                indicator.innerText = `${pageIndex + 1} / ${pageList.length}`;
+                indicator.title = `第 ${currentPage} 页`;
+                document.getElementById('prevPageBtn').disabled = pageIndex <= 0;
+                document.getElementById('nextPageBtn').disabled = pageIndex >= pageList.length - 1;
+            }
+        }
+
+        function updateProgress() {
+            const count = unlockedSet.size;
+            const total = fragmentsMap.size;
+            document.getElementById('progressDisplay').innerHTML = `📌 收集 ${count} / ${total} 张贴纸`;
+        }
+
+        // 处理解锁输入
+        async function handleUnlock() {
+            const btn = document.getElementById('unlockBtn');
+            const inputEl = document.getElementById('codeInput');
+            const raw = inputEl.value.trim();
+            const input = raw.toLowerCase();
+            if (!input) {
+                showMessage('🔍 请输入一个 Reference Code', 'error', 2500);
+                return;
+            }
+            // disable button while request in-flight
+            btn.disabled = true; btn.style.opacity = '0.7';
+
+            // lookup case-insensitive: map keys are currently stored as originally from DB -> normalize map when loading
+            const fragmentId = codeToIdMap.get(input) || codeToIdMap.get(raw) || codeToIdMap.get(raw.toUpperCase());
+            if (!fragmentId) {
+                showMessage(`❌ 没有「${raw}」对应的回忆，再试试别的~`, 'error', 3200);
+                btn.disabled = false; btn.style.opacity = '1';
+                return;
+            }
+            await unlockFragment(fragmentId, raw);
+            inputEl.value = '';
+            // 为最新解锁的贴纸添加弹跳动画
+            setTimeout(() => {
+                const newlyUnlocked = document.querySelectorAll('.sticker.unlocked');
+                const lastOne = newlyUnlocked[newlyUnlocked.length - 1];
+                if (lastOne) gsap.fromTo(lastOne, { scale: 0.8, rotation: -5 }, { scale: 1, rotation: 0, duration: 0.4, ease: "elastic.out(1, 0.5)" });
+            }, 50);
+            btn.disabled = false; btn.style.opacity = '1';
+        }
+
+        // 复制访客ID
+        function copyVisitorId() {
+            if (!currentVisitorId) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(currentVisitorId).then(() => {
+                    const copyIcon = document.getElementById('copyIdIcon');
+                    const originalTitle = copyIcon.getAttribute('title');
+                    copyIcon.setAttribute('title', '已复制！');
+                    setTimeout(() => copyIcon.setAttribute('title', originalTitle), 1500);
+                    gsap.to(copyIcon, { scale: 1.2, duration: 0.2, yoyo: true, repeat: 1 });
+                    showMessage('已复制 Visitor ID 到剪贴板', 'success', 1800);
+                }).catch(err => {
+                    // fallback
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = currentVisitorId; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+                        showMessage('已复制 Visitor ID 到剪贴板 (fallback)', 'success', 1800);
+                    } catch (e) {
+                        console.error('复制失败', err, e);
+                        showMessage('复制失败：请手动复制右侧 ID', 'error', 3000);
+                    }
                 });
             } else {
-                stickerDiv.style.cursor = 'default';
+                // legacy fallback
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = currentVisitorId; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+                    showMessage('已复制 Visitor ID 到剪贴板 (fallback)', 'success', 1800);
+                } catch (e) {
+                    showMessage('复制失败：请手动复制右侧 ID', 'error', 3000);
+                }
             }
-            grid.appendChild(stickerDiv);
         }
-    }
 
-    function updateProgress() {
-        const count = unlockedSet.size;
-        const total = fragmentsMap.size;
-        document.getElementById('progressDisplay').innerHTML = `📌 收集 ${count} / ${total} 张贴纸`;
-    }
-
-    // 处理解锁输入
-    async function handleUnlock() {
-        const input = document.getElementById('codeInput').value.trim().toLowerCase();
-        if (!input) {
-            document.getElementById('messageArea').innerText = '🔍 请输入一个 Reference Code';
-            return;
+        // 通过粘贴 Visitor ID 恢复进度
+        async function restoreVisitor() {
+            const input = document.getElementById('restoreVisitorInput').value.trim();
+            if (!input) {
+                showMessage('🔍 请输入你的 Visitor ID (例如 VISITOR-XXXX)', 'error', 2500);
+                return;
+            }
+            // save and reload progress
+            currentVisitorId = input;
+            localStorage.setItem('visitor_id', currentVisitorId);
+            document.getElementById('visitorIdDisplay').innerText = currentVisitorId;
+            showMessage('⏳ 正在恢复收藏进度...', 'info', 1200);
+            await loadProgress();
+            renderStickerGrid();
+            showMessage(`✅ 已恢复 ${currentVisitorId} 的收藏进度`, 'success', 3000);
         }
-        const fragmentId = codeToIdMap.get(input);
-        if (!fragmentId) {
-            document.getElementById('messageArea').innerText = `❌ 没有「${input}」对应的回忆，再试试别的~`;
-            return;
-        }
-        await unlockFragment(fragmentId, input);
-        document.getElementById('codeInput').value = '';
-        // 为最新解锁的贴纸添加弹跳动画
-        setTimeout(() => {
-            const newlyUnlocked = document.querySelectorAll('.sticker.unlocked');
-            const lastOne = newlyUnlocked[newlyUnlocked.length-1];
-            if(lastOne) gsap.fromTo(lastOne, { scale: 0.8, rotation: -5 }, { scale: 1, rotation: 0, duration: 0.4, ease: "elastic.out(1, 0.5)" });
-        }, 50);
-    }
 
-    // 复制访客ID
-    function copyVisitorId() {
-        if (!currentVisitorId) return;
-        navigator.clipboard.writeText(currentVisitorId).then(() => {
-            const copyIcon = document.getElementById('copyIdIcon');
-            const originalTitle = copyIcon.getAttribute('title');
-            copyIcon.setAttribute('title', '已复制！');
-            setTimeout(() => copyIcon.setAttribute('title', originalTitle), 1500);
-            gsap.to(copyIcon, { scale: 1.2, duration: 0.2, yoyo: true, repeat: 1 });
-        }).catch(err => {
-            console.error('复制失败', err);
-        });
-    }
-
-    // 通过粘贴 Visitor ID 恢复进度
-    async function restoreVisitor() {
-        const input = document.getElementById('restoreVisitorInput').value.trim();
-        if (!input) {
-            document.getElementById('messageArea').innerText = '🔍 请输入你的 Visitor ID (例如 VISITOR-XXXX)';
-            return;
-        }
-        // save and reload progress
-        currentVisitorId = input;
-        localStorage.setItem('visitor_id', currentVisitorId);
-        document.getElementById('visitorIdDisplay').innerText = currentVisitorId;
-        document.getElementById('messageArea').innerText = '⏳ 正在恢复收藏进度...';
-        await loadProgress();
-        renderStickerGrid();
-        document.getElementById('messageArea').innerText = `✅ 已恢复 ${currentVisitorId} 的收藏进度`;
-    }
-
-    // 启动应用
-    window.onload = init;
-</script>
+        // 启动应用
+        window.onload = init;
+    </script>
 </body>
+
 </html>

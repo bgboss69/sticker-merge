@@ -1019,7 +1019,7 @@
 
                 const metaLine = document.createElement('div');
                 metaLine.style.cssText = 'font-size:0.75rem;color:#8ba0ae;margin-bottom:6px;';
-                metaLine.innerText = `👤 ${String(c.visitor_id || '').slice(-4)} · ${.toLocaleString('en-MY', {timeZone: 'Asia/Kuala_Lumpur'})}`;
+                metaLine.innerText = `👤 ${String(c.visitor_id || '').slice(-4)} · ${new Date().toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}`;
 
                 // if this comment belongs to currentVisitorId (exact match) or last-4 match, show delete button
                 const sameVisitor = c.visitor_id && currentVisitorId && (c.visitor_id === currentVisitorId || String(c.visitor_id).slice(-4) === String(currentVisitorId).slice(-4));

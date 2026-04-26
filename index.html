@@ -3,6 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#f3b33d">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>小熊虫回忆·贴纸簿</title>
     <!-- GSAP 动画库 -->
@@ -364,7 +366,80 @@
             justify-content: center;
             z-index: 1000;
 
-            overflow: hidden; /* ✅ 防止背景滚动 */
+            overflow: hidden;
+            /* ✅ 防止背景滚动 */
+        }
+
+        .wa-img-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        .edit-img-btn {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            background: rgba(0, 0, 0, 0.55);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-img-btn:hover {
+            background: rgba(0, 0, 0, 0.75);
+            transform: scale(1.08);
+        }
+
+        .wa-empty-img {
+            width: 100%;
+            max-width: 320px;
+            height: 180px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #8ba0ae;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            margin: 12px auto;
+        }
+
+        .wa-empty-img i {
+            font-size: 1.6rem;
+            margin-bottom: 6px;
+        }
+
+        .wa-message-wrapper {
+            position: relative;
+        }
+
+        .edit-text-btn {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.45);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-text-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: scale(1.05);
         }
 
         .whatsapp-card {
@@ -720,7 +795,7 @@
             </div>
             <div class="progress-badge" id="progressDisplay">📌 收集 0 / 52 张贴纸</div>
         </div>
-        
+
         <h1>🌈 回忆贴纸簿 <span>轻拍贴纸有惊喜哦！</span></h1>
         <div class="subhead">✨ 每个 Reference Code 对应一段独特的记忆 ✨</div>
 
@@ -994,12 +1069,64 @@
             return escapeHtml(str).replace(/\r?\n/g, '<br>');
         }
 
+        async function triggerImageEdit(fragment) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (!file) return;
+
+                if (file.size > 2 * 1024 * 1024) {
+                    showMessage('图片不能超过2MB', 'error');
+                    return;
+                }
+
+                showMessage('⏳ 上传中...', 'info');
+
+                const fileName = `fragment_${fragment.id}_${Date.now()}`;
+
+                const { error } = await supabaseClient
+                    .storage
+                    .from('icons')
+                    .upload(fileName, file, { upsert: true });
+
+                if (error) {
+                    console.error(error);
+                    showMessage('上传失败', 'error');
+                    return;
+                }
+
+                const newUrl = `${SUPABASE_URL}/storage/v1/object/public/icons/${fileName}`;
+
+                const { error: updateError } = await supabaseClient
+                    .from('fragments')
+                    .update({ icon_url: newUrl })
+                    .eq('id', fragment.id);
+
+                if (updateError) {
+                    console.error(updateError);
+                    showMessage('更新失败', 'error');
+                    return;
+                }
+
+                showMessage('✅ 图片已更新', 'success');
+
+                await loadFragments();
+                renderStickerGrid();
+                showWhatsAppModal(fragmentsMap.get(fragment.id));
+            };
+
+            input.click();
+        }
+
         async function loadComments(fragmentId) {
             const { data, error } = await supabaseClient
                 .from('messages')
                 .select('*')
                 .eq('fragment_id', fragmentId)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: true });
 
             const list = document.getElementById('commentsList');
             if (!list) return;
@@ -1016,6 +1143,7 @@
 
                 const item = document.createElement('div');
                 item.className = 'comment-item';
+                item.style.position = 'relative';
 
                 const metaLine = document.createElement('div');
                 metaLine.style.cssText = 'font-size:0.75rem;color:#8ba0ae;margin-bottom:6px;';
@@ -1048,10 +1176,44 @@
                         }
                     };
                     metaLine.appendChild(delBtn);
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'delete-comment-btn';
+                    editBtn.style.color = '#ffd166';
+                    editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+
+                    editBtn.onclick = async (e) => {
+                        e.stopPropagation();
+
+                        const newText = prompt('编辑你的留言：', c.content);
+                        if (newText === null) return;
+
+                        try {
+                            const { error } = await supabaseClient
+                                .from('messages')
+                                .update({ content: newText })
+                                .eq('id', c.id);
+
+                            if (error) throw error;
+
+                            showMessage('留言已更新 ✏️', 'success', 2000);
+                            await loadComments(fragmentId);
+
+                        } catch (err) {
+                            console.error(err);
+                            showMessage('更新失败', 'error');
+                        }
+                    };
+
+                    metaLine.appendChild(editBtn);
                 }
 
+
+
                 const contentDiv = document.createElement('div');
+                contentDiv.className = 'comment-text';
                 contentDiv.innerHTML = formattedText;
+                contentDiv.dataset.id = c.id;
 
                 item.appendChild(metaLine);
                 item.appendChild(contentDiv);
@@ -1093,7 +1255,7 @@
 
             const avatarIcon = (fragment.id % 2 === 0 ? "💖" : "🌟");
             const mainImageSrc = getIconSrc(fragment);
-            const senderName = fragment.id % 2 === 0 ? "特别的人" : "我自己";
+            const senderName = "(>A<)!";
 
             function escapeHtml(str) {
                 return String(str)
@@ -1112,12 +1274,23 @@
             <div class="wa-name">${senderName}</div>
         </div>
 
-        ${mainImageSrc ? `<img src="${mainImageSrc}" class="wa-main-img">` : ''}
+        <div class="wa-img-wrapper">
+            ${mainImageSrc
+                    ? `<img src="${mainImageSrc}" class="wa-main-img">`
+                    : `<div class="wa-empty-img">
+                        <i class="fas fa-image"></i><br>
+                        点击添加图片
+                </div>`
+                }
+            <button class="edit-img-btn" id="editImageBtn">
+                <i class="fas fa-pen"></i>
+            </button>
+        </div>
 
         <div class="wa-message">${formatted}</div>
-
+        <hr>
         <div class="comment-area">
-
+            <div id="commentsList"></div>
             <div class="comment-controls">
                 <textarea id="commentInput" placeholder="写点什么回忆..." maxlength="400"></textarea>
 
@@ -1144,7 +1317,6 @@
                 </button>
             </div>
 
-            <div id="commentsList"></div>
         </div>
 
         <button class="close-modal" id="closeModalBtn">关闭贴纸</button>
@@ -1158,6 +1330,12 @@
             const removeImageBtn = modalContent.querySelector('#removeImageBtn');
             const sendBtn = modalContent.querySelector('#sendCommentBtn');
             const charCount = modalContent.querySelector('#charCount');
+            const editBtn = modalContent.querySelector('#editImageBtn');
+            if (editBtn) {
+                editBtn.onclick = () => {
+                    triggerImageEdit(fragment);
+                };
+            }
 
             const btnText = sendBtn.querySelector('.btn-text');
             const btnLoading = sendBtn.querySelector('.btn-loading');

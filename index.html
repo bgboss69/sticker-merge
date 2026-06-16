@@ -1671,7 +1671,9 @@
         }
 
         // ======================== 导出收藏卡片 ========================
-        function exportCollectionCard() {
+        async function exportCollectionCard() {
+            showMessage('⏳ 正在生成卡片...', 'info', 0);
+
             const COLS = 6;
             const CELL = 80;
             const PAD = 32;
@@ -1686,6 +1688,21 @@
             const gridH = rows * CELL + (rows - 1) * 10;
             const W = gridW + PAD * 2;
             const H = HEADER_H + gridH + FOOTER_H + PAD * 2;
+
+            // Preload images for unlocked stickers
+            const imgCache = new Map();
+            await Promise.all(allFragments.map(f => {
+                if (!unlockedSet.has(f.id)) return Promise.resolve();
+                const src = getIconSrc(f);
+                if (!src) return Promise.resolve();
+                return new Promise(resolve => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => { imgCache.set(f.id, img); resolve(); };
+                    img.onerror = () => resolve(); // fallback to emoji on error
+                    img.src = src;
+                });
+            }));
 
             const canvas = document.createElement('canvas');
             canvas.width = W * 2;
@@ -1760,17 +1777,27 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // Emoji icon
                 ctx.textAlign = 'center';
                 if (isUnlocked) {
-                    ctx.font = '28px serif';
-                    ctx.globalAlpha = 1;
-                    ctx.fillText(f.icon || '⭐', x + CELL / 2, y + CELL / 2 + 5);
+                    const imgEl = imgCache.get(f.id);
+                    if (imgEl) {
+                        // Draw actual image, clipped to rounded rect
+                        ctx.save();
+                        roundRect(ctx, x + 8, y + 8, CELL - 16, CELL - 24, 8);
+                        ctx.clip();
+                        ctx.drawImage(imgEl, x + 8, y + 8, CELL - 16, CELL - 24);
+                        ctx.restore();
+                    } else {
+                        // Fallback: emoji
+                        ctx.font = '28px serif';
+                        ctx.globalAlpha = 1;
+                        ctx.fillStyle = '#5e3a1c';
+                        ctx.fillText(f.icon || '⭐', x + CELL / 2, y + CELL / 2 + 2);
+                    }
                     // Label
                     ctx.font = 'bold 8px "Segoe UI", sans-serif';
                     ctx.fillStyle = '#7a4d2a';
-                    const label = (f.label || '').slice(0, 8);
-                    ctx.fillText(label, x + CELL / 2, y + CELL - 8);
+                    ctx.fillText((f.label || '').slice(0, 8), x + CELL / 2, y + CELL - 8);
                 } else {
                     ctx.font = '26px serif';
                     ctx.globalAlpha = 0.35;
@@ -1787,13 +1814,19 @@
             ctx.fillText('小熊虫回忆·贴纸簿 🐻', W / 2, H - 20);
 
             // Download
-            const link = document.createElement('a');
-            link.download = `贴纸收藏卡_${shortId}_${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-
-            showMessage('🎉 收藏卡片已导出！', 'success', 3000);
-            launchConfetti(W / 2, H / 3);
+            try {
+                const link = document.createElement('a');
+                link.download = `贴纸收藏卡_${shortId}_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showMessage('🎉 收藏卡片已导出！', 'success', 3000);
+                launchConfetti(window.innerWidth / 2, window.innerHeight / 3);
+            } catch (e) {
+                // Canvas tainted by cross-origin image — retry without images
+                showMessage('⚠️ 图片跨域限制，改用 emoji 导出', 'info', 2000);
+                imgCache.clear();
+                setTimeout(exportCollectionCard, 100);
+            }
         }
 
         function roundRect(ctx, x, y, w, h, r) {

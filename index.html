@@ -668,6 +668,41 @@
             color: #b68b54;
         }
 
+        /* Export button */
+        .export-btn {
+            background: linear-gradient(135deg, #f3b33d, #e07b2a);
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            color: #3e2a1c;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 14px rgba(243,179,61,0.35);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 auto;
+        }
+        .export-btn:hover { transform: scale(1.04); box-shadow: 0 6px 18px rgba(243,179,61,0.5); }
+        .export-btn:active { transform: scale(0.97); }
+
+        /* Confetti particle */
+        .confetti-particle {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            pointer-events: none;
+            z-index: 9999;
+            animation: confetti-fall 1.2s ease-out forwards;
+        }
+        @keyframes confetti-fall {
+            0%   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+            100% { opacity: 0; transform: translateY(220px) rotate(720deg) scale(0.4); }
+        }
+
         /* Responsive tweaks */
         @media (max-width: 600px) {
             .sticker-grid {
@@ -813,6 +848,11 @@
             <button id="unlockBtn" class="unlock-btn">🔓 粘贴新贴纸</button>
         </div>
         <div id="messageArea" class="message"></div>
+        <div style="text-align:center; margin: 16px 0 8px;">
+            <button class="export-btn" id="exportBtn">
+                <i class="fas fa-share-alt"></i> 导出收藏卡片
+            </button>
+        </div>
         <footer>💡 提示：每个 Reference Code 只能解锁一次。你的收藏进度保存在本地，更换设备后请输入你的收藏夹ID恢复进度。</footer>
     </div>
 
@@ -949,6 +989,7 @@
             document.getElementById('codeInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') handleUnlock();
             });
+            document.getElementById('exportBtn').onclick = exportCollectionCard;
             // pagination handlers - navigate using actual pages from DB
             document.getElementById('prevPageBtn').onclick = async () => {
                 const pages = Array.from(new Set(Array.from(fragmentsMap.values()).map(f => Number(f.page || 1)))).sort((a, b) => a - b);
@@ -1045,6 +1086,8 @@
                 updateProgress();
                 showWhatsAppModal(fragment);
                 showMessage(`🎉 获得新贴纸：「${refCode}」！`, 'success', 3500);
+                // Confetti burst at center of screen
+                launchConfetti(window.innerWidth / 2, window.innerHeight / 3, 36);
                 // 全收集彩蛋
                 if (unlockedSet.size === fragmentsMap.size) {
                     setTimeout(() => alert("🎊 太棒了！你集齐了全部回忆贴纸！ 🎊"), 500);
@@ -1592,6 +1635,179 @@
             await loadProgress();
             renderStickerGrid();
             showMessage(`✅ 已恢复 ${currentVisitorId} 的收藏进度`, 'success', 3000);
+        }
+
+        // ======================== 烟花粒子特效 ========================
+        function launchConfetti(originX, originY, count = 28) {
+            const colors = ['#f3b33d','#ff6b9d','#25d366','#4ecdc4','#ffe66d','#a78bfa','#f97316'];
+            for (let i = 0; i < count; i++) {
+                const el = document.createElement('div');
+                el.className = 'confetti-particle';
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const size = 7 + Math.random() * 9;
+                const dx = (Math.random() - 0.5) * 260;
+                const dy = -(Math.random() * 200 + 60);
+                el.style.cssText = `
+                    left: ${originX}px; top: ${originY}px;
+                    width: ${size}px; height: ${size}px;
+                    background: ${color};
+                    border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+                    transform-origin: center;
+                    animation: none;
+                `;
+                document.body.appendChild(el);
+                gsap.fromTo(el,
+                    { x: 0, y: 0, opacity: 1, scale: 1, rotation: 0 },
+                    {
+                        x: dx, y: dy + 180,
+                        opacity: 0, scale: 0.3,
+                        rotation: Math.random() * 720 - 360,
+                        duration: 0.9 + Math.random() * 0.6,
+                        ease: 'power2.out',
+                        onComplete: () => el.remove()
+                    }
+                );
+            }
+        }
+
+        // ======================== 导出收藏卡片 ========================
+        function exportCollectionCard() {
+            const COLS = 6;
+            const CELL = 80;
+            const PAD = 32;
+            const HEADER_H = 140;
+            const FOOTER_H = 60;
+
+            const allFragments = Array.from(fragmentsMap.values())
+                .sort((a, b) => (Number(a.page||1) - Number(b.page||1)) || (Number(a.order||0) - Number(b.order||0)));
+            const total = allFragments.length || 1;
+            const rows = Math.ceil(total / COLS);
+            const gridW = COLS * CELL + (COLS - 1) * 10;
+            const gridH = rows * CELL + (rows - 1) * 10;
+            const W = gridW + PAD * 2;
+            const H = HEADER_H + gridH + FOOTER_H + PAD * 2;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = W * 2;
+            canvas.height = H * 2;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(2, 2);
+
+            // Background gradient
+            const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+            bgGrad.addColorStop(0, '#fff9ef');
+            bgGrad.addColorStop(1, '#ffe8c0');
+            ctx.fillStyle = bgGrad;
+            roundRect(ctx, 0, 0, W, H, 28);
+            ctx.fill();
+
+            // Title
+            ctx.fillStyle = '#5e3a1c';
+            ctx.font = 'bold 22px "Segoe UI", system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🌈 回忆贴纸簿', W / 2, PAD + 28);
+
+            // Progress badge
+            const unlocked = unlockedSet.size;
+            const badgeText = `✨ 已收集 ${unlocked} / ${total} 张`;
+            ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+            const bW = ctx.measureText(badgeText).width + 28;
+            const bX = (W - bW) / 2;
+            ctx.fillStyle = '#5e3a1c';
+            roundRect(ctx, bX, PAD + 42, bW, 28, 14);
+            ctx.fill();
+            ctx.fillStyle = '#ffeaac';
+            ctx.fillText(badgeText, W / 2, PAD + 61);
+
+            // Visitor ID (last 6 chars)
+            const shortId = currentVisitorId ? currentVisitorId.slice(-6) : '------';
+            ctx.font = '11px monospace';
+            ctx.fillStyle = '#b68b54';
+            ctx.fillText(`ID: ...${shortId}`, W / 2, PAD + 90);
+
+            // Date
+            const dateStr = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+            ctx.font = '11px "Segoe UI", sans-serif';
+            ctx.fillStyle = '#c9a06a';
+            ctx.fillText(dateStr, W / 2, PAD + 108);
+
+            // Sticker grid
+            const gridX = PAD;
+            const gridY = HEADER_H + PAD;
+            allFragments.forEach((f, i) => {
+                const col = i % COLS;
+                const row = Math.floor(i / COLS);
+                const x = gridX + col * (CELL + 10);
+                const y = gridY + row * (CELL + 10);
+                const isUnlocked = unlockedSet.has(f.id);
+
+                // Cell background
+                if (isUnlocked) {
+                    const grad = ctx.createLinearGradient(x, y, x + CELL, y + CELL);
+                    grad.addColorStop(0, '#fff6e8');
+                    grad.addColorStop(1, '#ffe6ce');
+                    ctx.fillStyle = grad;
+                    ctx.strokeStyle = '#f3b33d';
+                    ctx.lineWidth = 2;
+                } else {
+                    ctx.fillStyle = '#e2d5c0';
+                    ctx.strokeStyle = '#bc9a6c';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4, 3]);
+                }
+                roundRect(ctx, x, y, CELL, CELL, 14);
+                ctx.fill();
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Emoji icon
+                ctx.textAlign = 'center';
+                if (isUnlocked) {
+                    ctx.font = '28px serif';
+                    ctx.globalAlpha = 1;
+                    ctx.fillText(f.icon || '⭐', x + CELL / 2, y + CELL / 2 + 5);
+                    // Label
+                    ctx.font = 'bold 8px "Segoe UI", sans-serif';
+                    ctx.fillStyle = '#7a4d2a';
+                    const label = (f.label || '').slice(0, 8);
+                    ctx.fillText(label, x + CELL / 2, y + CELL - 8);
+                } else {
+                    ctx.font = '26px serif';
+                    ctx.globalAlpha = 0.35;
+                    ctx.fillStyle = '#7a4d2a';
+                    ctx.fillText('❓', x + CELL / 2, y + CELL / 2 + 5);
+                    ctx.globalAlpha = 1;
+                }
+            });
+
+            // Footer watermark
+            ctx.textAlign = 'center';
+            ctx.font = '11px "Segoe UI", sans-serif';
+            ctx.fillStyle = '#c9a06a';
+            ctx.fillText('小熊虫回忆·贴纸簿 🐻', W / 2, H - 20);
+
+            // Download
+            const link = document.createElement('a');
+            link.download = `贴纸收藏卡_${shortId}_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+
+            showMessage('🎉 收藏卡片已导出！', 'success', 3000);
+            launchConfetti(W / 2, H / 3);
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
         }
 
         // 启动应用

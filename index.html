@@ -848,10 +848,22 @@
             <button id="unlockBtn" class="unlock-btn">🔓 粘贴新贴纸</button>
         </div>
         <div id="messageArea" class="message"></div>
-        <div style="text-align:center; margin: 16px 0 8px;">
+        <div style="text-align:center; margin: 16px 0 8px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
             <button class="export-btn" id="exportBtn">
                 <i class="fas fa-share-alt"></i> 导出收藏卡片
             </button>
+            <button class="export-btn" id="videoBtn" style="background:linear-gradient(135deg,#a78bfa,#7c3aed); color:white;">
+                <i class="fas fa-film"></i> 生成回忆视频
+            </button>
+        </div>
+
+        <!-- 视频预览弹窗 -->
+        <div id="videoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+            <canvas id="videoCanvas" style="max-width:92vw; max-height:65vh; border-radius:20px; box-shadow:0 20px 40px rgba(0,0,0,0.5);"></canvas>
+            <div id="videoStatus" style="color:white; font-size:1rem; font-weight:600; letter-spacing:0.5px;"></div>
+            <div style="width:260px; height:6px; background:rgba(255,255,255,0.15); border-radius:10px; overflow:hidden;">
+                <div id="videoProgress" style="height:100%; background:linear-gradient(90deg,#a78bfa,#7c3aed); border-radius:10px; width:0%; transition:width 0.1s;"></div>
+            </div>
         </div>
         <footer>💡 提示：每个 Reference Code 只能解锁一次。你的收藏进度保存在本地，更换设备后请输入你的收藏夹ID恢复进度。</footer>
     </div>
@@ -990,6 +1002,7 @@
                 if (e.key === 'Enter') handleUnlock();
             });
             document.getElementById('exportBtn').onclick = exportCollectionCard;
+            document.getElementById('videoBtn').onclick = exportCollectionVideo;
             // pagination handlers - navigate using actual pages from DB
             document.getElementById('prevPageBtn').onclick = async () => {
                 const pages = Array.from(new Set(Array.from(fragmentsMap.values()).map(f => Number(f.page || 1)))).sort((a, b) => a - b);
@@ -1671,7 +1684,9 @@
         }
 
         // ======================== 导出收藏卡片 ========================
-        function exportCollectionCard() {
+        async function exportCollectionCard() {
+            showMessage('⏳ 正在生成卡片...', 'info', 0);
+
             const COLS = 6;
             const CELL = 80;
             const PAD = 32;
@@ -1686,6 +1701,21 @@
             const gridH = rows * CELL + (rows - 1) * 10;
             const W = gridW + PAD * 2;
             const H = HEADER_H + gridH + FOOTER_H + PAD * 2;
+
+            // Preload images for unlocked stickers
+            const imgCache = new Map();
+            await Promise.all(allFragments.map(f => {
+                if (!unlockedSet.has(f.id)) return Promise.resolve();
+                const src = getIconSrc(f);
+                if (!src) return Promise.resolve();
+                return new Promise(resolve => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => { imgCache.set(f.id, img); resolve(); };
+                    img.onerror = () => resolve(); // fallback to emoji on error
+                    img.src = src;
+                });
+            }));
 
             const canvas = document.createElement('canvas');
             canvas.width = W * 2;
@@ -1760,17 +1790,27 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // Emoji icon
                 ctx.textAlign = 'center';
                 if (isUnlocked) {
-                    ctx.font = '28px serif';
-                    ctx.globalAlpha = 1;
-                    ctx.fillText(f.icon || '⭐', x + CELL / 2, y + CELL / 2 + 5);
+                    const imgEl = imgCache.get(f.id);
+                    if (imgEl) {
+                        // Draw actual image, clipped to rounded rect
+                        ctx.save();
+                        roundRect(ctx, x + 8, y + 8, CELL - 16, CELL - 24, 8);
+                        ctx.clip();
+                        ctx.drawImage(imgEl, x + 8, y + 8, CELL - 16, CELL - 24);
+                        ctx.restore();
+                    } else {
+                        // Fallback: emoji
+                        ctx.font = '28px serif';
+                        ctx.globalAlpha = 1;
+                        ctx.fillStyle = '#5e3a1c';
+                        ctx.fillText(f.icon || '⭐', x + CELL / 2, y + CELL / 2 + 2);
+                    }
                     // Label
                     ctx.font = 'bold 8px "Segoe UI", sans-serif';
                     ctx.fillStyle = '#7a4d2a';
-                    const label = (f.label || '').slice(0, 8);
-                    ctx.fillText(label, x + CELL / 2, y + CELL - 8);
+                    ctx.fillText((f.label || '').slice(0, 8), x + CELL / 2, y + CELL - 8);
                 } else {
                     ctx.font = '26px serif';
                     ctx.globalAlpha = 0.35;
@@ -1787,13 +1827,298 @@
             ctx.fillText('小熊虫回忆·贴纸簿 🐻', W / 2, H - 20);
 
             // Download
-            const link = document.createElement('a');
-            link.download = `贴纸收藏卡_${shortId}_${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            try {
+                const link = document.createElement('a');
+                link.download = `贴纸收藏卡_${shortId}_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showMessage('🎉 收藏卡片已导出！', 'success', 3000);
+                launchConfetti(window.innerWidth / 2, window.innerHeight / 3);
+            } catch (e) {
+                // Canvas tainted by cross-origin image — retry without images
+                showMessage('⚠️ 图片跨域限制，改用 emoji 导出', 'info', 2000);
+                imgCache.clear();
+                setTimeout(exportCollectionCard, 100);
+            }
+        }
 
-            showMessage('🎉 收藏卡片已导出！', 'success', 3000);
-            launchConfetti(W / 2, H / 3);
+        // ======================== 回忆视频生成 ========================
+        async function exportCollectionVideo() {
+            const btn = document.getElementById('videoBtn');
+            btn.disabled = true;
+
+            const W = 600, H = 960, FPS = 30;
+
+            const allFragments = Array.from(fragmentsMap.values())
+                .sort((a, b) => (Number(a.page||1) - Number(b.page||1)) || (Number(a.order||0) - Number(b.order||0)));
+            const total = allFragments.length || 1;
+
+            // Preload images
+            const imgCache = new Map();
+            await Promise.all(allFragments.map(f => {
+                if (!unlockedSet.has(f.id)) return Promise.resolve();
+                const src = getIconSrc(f);
+                if (!src) return Promise.resolve();
+                return new Promise(resolve => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => { imgCache.set(f.id, img); resolve(); };
+                    img.onerror = () => resolve();
+                    img.src = src;
+                });
+            }));
+
+            // Setup canvas
+            const canvas = document.getElementById('videoCanvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+
+            // Show modal
+            const modal = document.getElementById('videoModal');
+            modal.style.display = 'flex';
+            const statusEl = document.getElementById('videoStatus');
+            const progressEl = document.getElementById('videoProgress');
+
+            // MediaRecorder
+            const mimeType = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m => MediaRecorder.isTypeSupported(m)) || '';
+            const stream = canvas.captureStream(FPS);
+            const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+            const chunks = [];
+            recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.download = `回忆视频_${Date.now()}.webm`;
+                a.href = url;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                modal.style.display = 'none';
+                btn.disabled = false;
+                showMessage('🎬 视频已导出！', 'success', 4000);
+                launchConfetti(window.innerWidth / 2, window.innerHeight / 3, 48);
+            };
+
+            // Timing
+            const COLS = 6;
+            const CELL = 74;
+            const GAP = 8;
+            const ROWS = Math.ceil(total / COLS);
+            const gridW = COLS * CELL + (COLS - 1) * GAP;
+            const gridH = ROWS * CELL + (ROWS - 1) * GAP;
+            const gridX = (W - gridW) / 2;
+            const gridY = 200;
+
+            const INTRO = 70;
+            const S_DELAY = 5;   // frames between each sticker
+            const S_DUR = 22;    // animation duration per sticker
+            const OUTRO = 100;
+            const TOTAL_FRAMES = INTRO + total * S_DELAY + S_DUR + OUTRO;
+
+            // Easing
+            function easeOutElastic(t) {
+                if (t <= 0) return 0; if (t >= 1) return 1;
+                return Math.pow(2, -10*t) * Math.sin((t*10 - 0.75) * (2*Math.PI/3)) + 1;
+            }
+            function easeOut(t) { return 1 - (1-t)*(1-t); }
+
+            // Draw helper: rounded rect path only
+            function rrPath(x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x+r, y);
+                ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+                ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+                ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+                ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+                ctx.closePath();
+            }
+
+            // Particle system for outro
+            const particles = Array.from({length: 40}, () => ({
+                x: Math.random() * W, y: -20,
+                vx: (Math.random()-0.5)*4, vy: 2+Math.random()*3,
+                size: 6+Math.random()*8, rotation: Math.random()*360,
+                rotV: (Math.random()-0.5)*8,
+                color: ['#f3b33d','#ff6b9d','#a78bfa','#25d366','#4ecdc4','#ffe66d'][Math.floor(Math.random()*6)]
+            }));
+
+            recorder.start(100);
+            let frame = 0;
+
+            await new Promise(resolve => {
+                function tick() {
+                    ctx.clearRect(0, 0, W, H);
+
+                    // --- Background ---
+                    const bg = ctx.createLinearGradient(0, 0, W, H);
+                    bg.addColorStop(0, '#fff9ef');
+                    bg.addColorStop(1, '#ffd899');
+                    ctx.fillStyle = bg;
+                    ctx.fillRect(0, 0, W, H);
+
+                    // Subtle dot pattern
+                    ctx.fillStyle = 'rgba(243,179,61,0.06)';
+                    for (let dy = 0; dy < H; dy += 28)
+                        for (let dx = 0; dx < W; dx += 28) {
+                            ctx.beginPath(); ctx.arc(dx, dy, 2, 0, Math.PI*2); ctx.fill();
+                        }
+
+                    // --- Header ---
+                    const introT = Math.min(1, frame / 40);
+                    ctx.globalAlpha = easeOut(introT);
+
+                    // Title bg pill
+                    ctx.fillStyle = '#5e3a1c';
+                    rrPath(W/2 - 160, 36, 320, 52, 26); ctx.fill();
+                    ctx.fillStyle = '#ffeaac';
+                    ctx.font = 'bold 28px "Segoe UI", system-ui, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🌈 回忆贴纸簿', W/2, 70);
+
+                    if (frame > 25) {
+                        const subT = easeOut(Math.min(1, (frame-25)/30));
+                        ctx.globalAlpha = subT;
+                        ctx.font = '15px "Segoe UI", sans-serif';
+                        ctx.fillStyle = '#a57c4c';
+                        ctx.fillText('✨ 我的专属贴纸收藏 ✨', W/2, 110);
+
+                        // Progress badge
+                        const badgeText = `已收集 ${unlockedSet.size} / ${total} 张`;
+                        ctx.font = 'bold 15px "Segoe UI", sans-serif';
+                        const bW = ctx.measureText(badgeText).width + 36;
+                        ctx.fillStyle = '#5e3a1c';
+                        rrPath((W-bW)/2, 126, bW, 34, 17); ctx.fill();
+                        ctx.fillStyle = '#ffeaac';
+                        ctx.fillText(badgeText, W/2, 149);
+                    }
+
+                    ctx.globalAlpha = 1;
+
+                    // --- Stickers ---
+                    allFragments.forEach((f, i) => {
+                        const startF = INTRO + i * S_DELAY;
+                        if (frame < startF) return;
+
+                        const t = Math.min(1, (frame - startF) / S_DUR);
+                        const scale = easeOutElastic(t);
+                        const alpha = Math.min(1, t * 4);
+                        const isUnlocked = unlockedSet.has(f.id);
+
+                        const col = i % COLS;
+                        const row = Math.floor(i / COLS);
+                        const cx = gridX + col * (CELL+GAP) + CELL/2;
+                        const cy = gridY + row * (CELL+GAP) + CELL/2;
+
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.translate(cx, cy);
+                        ctx.scale(scale, scale);
+
+                        // Glow for unlocked
+                        if (isUnlocked && t > 0.7) {
+                            ctx.shadowColor = '#f3b33d';
+                            ctx.shadowBlur = 12 * (1 - (t - 0.7)/0.3);
+                        }
+
+                        // Cell bg
+                        if (isUnlocked) {
+                            const g = ctx.createLinearGradient(-CELL/2, -CELL/2, CELL/2, CELL/2);
+                            g.addColorStop(0, '#fff6e8'); g.addColorStop(1, '#ffe6ce');
+                            ctx.fillStyle = g;
+                            ctx.strokeStyle = '#f3b33d'; ctx.lineWidth = 2;
+                        } else {
+                            ctx.fillStyle = '#e2d5c0';
+                            ctx.strokeStyle = '#bc9a6c'; ctx.lineWidth = 1.5;
+                            ctx.setLineDash([4,3]);
+                        }
+                        rrPath(-CELL/2, -CELL/2, CELL, CELL, 13);
+                        ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+                        ctx.shadowBlur = 0;
+
+                        ctx.textAlign = 'center';
+                        if (isUnlocked) {
+                            const imgEl = imgCache.get(f.id);
+                            if (imgEl) {
+                                ctx.save();
+                                rrPath(-CELL/2+6, -CELL/2+6, CELL-12, CELL-20, 7);
+                                ctx.clip();
+                                ctx.drawImage(imgEl, -CELL/2+6, -CELL/2+6, CELL-12, CELL-20);
+                                ctx.restore();
+                            } else {
+                                ctx.font = '26px serif'; ctx.fillStyle = '#5e3a1c';
+                                ctx.fillText(f.icon || '⭐', 0, 7);
+                            }
+                            ctx.font = 'bold 7px "Segoe UI", sans-serif';
+                            ctx.fillStyle = '#7a4d2a';
+                            ctx.fillText((f.label||'').slice(0,8), 0, CELL/2-7);
+                        } else {
+                            ctx.font = '22px serif'; ctx.globalAlpha = 0.3;
+                            ctx.fillStyle = '#7a4d2a';
+                            ctx.fillText('❓', 0, 7);
+                        }
+                        ctx.restore();
+                        ctx.globalAlpha = 1;
+                    });
+
+                    // --- Outro celebration ---
+                    const outroStart = INTRO + total * S_DELAY + S_DUR;
+                    if (frame >= outroStart) {
+                        const oT = (frame - outroStart) / OUTRO;
+
+                        // Confetti particles
+                        particles.forEach(p => {
+                            p.x += p.vx; p.y += p.vy; p.rotation += p.rotV;
+                            ctx.save();
+                            ctx.globalAlpha = Math.max(0, 1 - oT * 1.2);
+                            ctx.translate(p.x, p.y);
+                            ctx.rotate(p.rotation * Math.PI/180);
+                            ctx.fillStyle = p.color;
+                            ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
+                            ctx.restore();
+                        });
+
+                        // Bottom card
+                        const cardAlpha = easeOut(Math.min(1, oT * 2));
+                        ctx.globalAlpha = cardAlpha;
+                        const cardY = gridY + gridH + 24;
+                        ctx.fillStyle = 'rgba(94,58,28,0.08)';
+                        rrPath(W/2-150, cardY, 300, 110, 20); ctx.fill();
+
+                        ctx.fillStyle = '#5e3a1c';
+                        ctx.font = 'bold 22px "Segoe UI", sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('🎊 收藏完成！', W/2, cardY + 38);
+
+                        const shortId = currentVisitorId ? currentVisitorId.slice(-6) : '------';
+                        ctx.font = '13px monospace'; ctx.fillStyle = '#b68b54';
+                        ctx.fillText(`ID: ...${shortId}`, W/2, cardY + 62);
+
+                        ctx.font = '12px "Segoe UI", sans-serif'; ctx.fillStyle = '#c9a06a';
+                        ctx.fillText(new Date().toLocaleDateString('zh-CN'), W/2, cardY + 82);
+
+                        ctx.font = '11px "Segoe UI", sans-serif'; ctx.fillStyle = '#d4a06a';
+                        ctx.fillText('小熊虫回忆·贴纸簿 🐻', W/2, cardY + 102);
+
+                        ctx.globalAlpha = 1;
+                    }
+
+                    // Update UI
+                    const pct = Math.round((frame / TOTAL_FRAMES) * 100);
+                    progressEl.style.width = pct + '%';
+                    if (frame < INTRO) statusEl.textContent = '🎬 开场动画...';
+                    else if (frame < outroStart) statusEl.textContent = `✨ 贴纸飞入中... ${Math.min(total, Math.floor((frame-INTRO)/S_DELAY)+1)} / ${total}`;
+                    else statusEl.textContent = '🎊 收尾中...';
+
+                    frame++;
+                    if (frame <= TOTAL_FRAMES) {
+                        requestAnimationFrame(tick);
+                    } else {
+                        recorder.stop();
+                        resolve();
+                    }
+                }
+                requestAnimationFrame(tick);
+            });
         }
 
         function roundRect(ctx, x, y, w, h, r) {
